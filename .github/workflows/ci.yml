@@ -39,14 +39,6 @@ jobs:
     - name: Run tests with coverage
       run: uv run pytest tests/ --cov=src --cov-report=xml --cov-report=term-missing -v
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-        fail_ci_if_error: false
-
   code-quality:
     runs-on: ubuntu-latest
     steps:
@@ -93,31 +85,3 @@ jobs:
         uv add --dev bandit[toml]
         uv run bandit -r src/ -f json -o bandit-report.json || true
         uv run bandit -r src/
-
-  build:
-    runs-on: ubuntu-latest
-    needs: [test, code-quality]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Install uv
-      uses: astral-sh/setup-uv@v3
-      with:
-        version: "latest"
-
-    - name: Set up Python
-      run: uv python install 3.12
-
-    - name: Install dependencies
-      run: uv sync
-
-    - name: Build package
-      run: uv build
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist
-        path: dist/
