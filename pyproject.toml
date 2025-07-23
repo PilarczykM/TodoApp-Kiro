@@ -1,7 +1,3 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
 [project]
 name = "todo-app"
 version = "0.1.0"
@@ -39,23 +35,30 @@ todo = "src.main:main"
 target-version = "py312"
 line-length = 88
 select = [
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "F",  # pyflakes
-    "I",  # isort
-    "B",  # flake8-bugbear
-    "C4", # flake8-comprehensions
-    "UP", # pyupgrade
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "N",   # pep8-naming
+    "S",   # flake8-bandit
+    "T20", # flake8-print
+    "SIM", # flake8-simplify
+    "RUF", # Ruff-specific rules
 ]
 ignore = [
-    "E501",  # line too long, handled by black
+    "E501",  # line too long, handled by formatter
     "B008",  # do not perform function calls in argument defaults
     "C901",  # too complex
+    "S101",  # use of assert detected (allow in tests)
+    "T201",  # print found (allow for CLI app)
 ]
 
 [tool.ruff.per-file-ignores]
 "__init__.py" = ["F401"]
-"tests/**/*" = ["B011"]
+"tests/**/*" = ["B011", "S101", "T201"]  # Allow assert and print in tests
 
 [tool.ruff.isort]
 known-first-party = ["src"]
@@ -74,6 +77,13 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+show_error_codes = true
+pretty = true
+
+# Exclude tests directory from type checking as per requirements
+exclude = [
+    "tests/",
+]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
@@ -91,7 +101,19 @@ addopts = [
     "--cov=src",
     "--cov-report=term-missing",
     "--cov-report=html",
-    "--cov-fail-under=100"
+    "--cov-fail-under=100",
+    "--tb=short",
+    "--durations=10",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
 ]
 
 [tool.coverage.run]
