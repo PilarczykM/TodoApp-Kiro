@@ -88,7 +88,7 @@ from config.settings import Settings
 - **Class Length**: Maximum 200 lines per class
 - **Parameter Count**: Maximum 5 parameters per function
 - **Cyclomatic Complexity**: Maximum complexity of 10
-- **Naming Conventions**: 
+- **Naming Conventions**:
   - Classes: PascalCase (e.g., `TodoService`)
   - Functions/Variables: snake_case (e.g., `create_todo`)
   - Constants: UPPER_SNAKE_CASE (e.g., `MAX_TITLE_LENGTH`)
@@ -125,7 +125,7 @@ def create_todo_table(todos: List[TodoItem]) -> Table:
     table.add_column("Description", style="white")
     table.add_column("Due Date", style="yellow")
     table.add_column("Status", style="green")
-    
+
     for todo in todos:
         status = "✅ Complete" if todo.completed else "⏳ Pending"
         due_date = todo.due_date.strftime("%Y-%m-%d") if todo.due_date else "No due date"
@@ -136,7 +136,7 @@ def create_todo_table(todos: List[TodoItem]) -> Table:
             due_date,
             status
         )
-    
+
     return table
 ```
 
@@ -146,7 +146,7 @@ The application follows a clean architecture pattern with four distinct layers:
 
 ### 1. Domain Layer
 - **Purpose**: Contains business logic and domain models
-- **Components**: 
+- **Components**:
   - `TodoItem` model with Pydantic v2 validation
   - Domain services for business rules
   - Value objects and domain exceptions
@@ -196,17 +196,17 @@ class TodoItem(BaseModel):
     completed: bool = Field(default=False)
     created_at: datetime = Field(default_factory=datetime.now)
     updated_at: datetime = Field(default_factory=datetime.now)
-    
+
     @validator('due_date')
     def validate_due_date(cls, v):
         if v and v < datetime.now():
             raise ValueError('Due date cannot be in the past')
         return v
-    
+
     def mark_completed(self) -> None:
         self.completed = True
         self.updated_at = datetime.now()
-    
+
     def update_details(self, title: str = None, description: str = None, due_date: datetime = None) -> None:
         if title is not None:
             self.title = title
@@ -230,19 +230,19 @@ class TodoRepository(ABC):
     @abstractmethod
     def save(self, todo: TodoItem) -> None:
         pass
-    
+
     @abstractmethod
     def find_by_id(self, todo_id: UUID) -> Optional[TodoItem]:
         pass
-    
+
     @abstractmethod
     def find_all(self) -> List[TodoItem]:
         pass
-    
+
     @abstractmethod
     def update(self, todo: TodoItem) -> None:
         pass
-    
+
     @abstractmethod
     def delete(self, todo_id: UUID) -> bool:
         pass
@@ -261,32 +261,32 @@ from infrastructure.interfaces import TodoRepository
 class TodoService:
     def __init__(self, repository: TodoRepository):
         self._repository = repository
-    
+
     def create_todo(self, title: str, description: str = None, due_date: datetime = None) -> TodoItem:
         todo = TodoItem(title=title, description=description, due_date=due_date)
         self._repository.save(todo)
         return todo
-    
+
     def get_all_todos(self) -> List[TodoItem]:
         return self._repository.find_all()
-    
+
     def get_todo_by_id(self, todo_id: UUID) -> Optional[TodoItem]:
         return self._repository.find_by_id(todo_id)
-    
+
     def update_todo(self, todo_id: UUID, title: str = None, description: str = None, due_date: datetime = None) -> Optional[TodoItem]:
         todo = self._repository.find_by_id(todo_id)
         if todo:
             todo.update_details(title, description, due_date)
             self._repository.update(todo)
         return todo
-    
+
     def complete_todo(self, todo_id: UUID) -> Optional[TodoItem]:
         todo = self._repository.find_by_id(todo_id)
         if todo:
             todo.mark_completed()
             self._repository.update(todo)
         return todo
-    
+
     def delete_todo(self, todo_id: UUID) -> bool:
         return self._repository.delete(todo_id)
 ```
@@ -309,14 +309,14 @@ class JSONTodoRepository(TodoRepository):
     def __init__(self, file_path: str = "todos.json"):
         self.file_path = Path(file_path)
         self._ensure_file_exists()
-    
+
     def _ensure_file_exists(self):
         if not self.file_path.exists():
             self.file_path.write_text("[]")
-    
+
     def _load_todos(self) -> List[dict]:
         return json.loads(self.file_path.read_text())
-    
+
     def _save_todos(self, todos: List[dict]):
         self.file_path.write_text(json.dumps(todos, indent=2, default=str))
 ```
@@ -335,7 +335,7 @@ class XMLTodoRepository(TodoRepository):
     def __init__(self, file_path: str = "todos.xml"):
         self.file_path = Path(file_path)
         self._ensure_file_exists()
-    
+
     def _ensure_file_exists(self):
         if not self.file_path.exists():
             root = etree.Element("todos")
@@ -354,8 +354,8 @@ from rich.prompt import Prompt, Confirm
 from rich.panel import Panel
 from application.todo_service import TodoService
 from interface.console_helpers import (
-    display_success_message, 
-    display_error_message, 
+    display_success_message,
+    display_error_message,
     create_todo_table
 )
 from domain.exceptions import TodoNotFoundError, ValidationError
@@ -364,7 +364,7 @@ class TodoCLI:
     def __init__(self, todo_service: TodoService):
         self.console = Console()
         self.todo_service = todo_service
-    
+
     def run(self) -> None:
         """Main application loop"""
         self._display_welcome()
@@ -373,7 +373,7 @@ class TodoCLI:
             choice = self._get_user_choice()
             if not self._handle_choice(choice):
                 break
-    
+
     def _display_welcome(self) -> None:
         """Display welcome message"""
         welcome = Panel.fit(
@@ -381,7 +381,7 @@ class TodoCLI:
             title="Todo Application"
         )
         self.console.print(welcome)
-    
+
     def _display_menu(self) -> None:
         """Display main menu options"""
         menu = Panel.fit(
@@ -389,7 +389,7 @@ class TodoCLI:
             title="Todo App Menu"
         )
         self.console.print(menu)
-    
+
     def _list_todos(self) -> None:
         """Display all todos in a formatted table"""
         try:
@@ -397,7 +397,7 @@ class TodoCLI:
             if not todos:
                 display_error_message(self.console, "No todos found")
                 return
-            
+
             table = create_todo_table(todos)
             self.console.print(table)
         except Exception as e:
@@ -601,7 +601,7 @@ class Settings(BaseModel):
     storage_type: StorageType = StorageType.JSON
     data_file_path: str = "todos"
     log_level: str = "INFO"
-        
+
     @classmethod
     def load_from_config_file(cls, config_path: str = "config.json"):
         """Load settings from configuration file"""
@@ -643,14 +643,14 @@ def create_repository(settings: Settings):
 def main():
     # Load settings from configuration file
     settings = Settings.load_from_config_file("config.json")
-    
+
     # Create repository based on configured storage type
     repository = create_repository(settings)
-    
+
     # Wire up dependencies
     service = TodoService(repository)
     cli = TodoCLI(service)
-    
+
     # Start application
     cli.run()
 

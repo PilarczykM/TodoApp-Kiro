@@ -52,13 +52,13 @@ class TodoItem:
         self.description = description
         self.status = TodoStatus.PENDING
         self.created_at = datetime.now()
-    
+
     def complete(self):
         if self.status == TodoStatus.COMPLETED:
             raise DomainError("Todo is already completed")
         self.status = TodoStatus.COMPLETED
         self.completed_at = datetime.now()
-    
+
     def _validate_title(self, title: str):
         if not title or len(title.strip()) == 0:
             raise DomainError("Title cannot be empty")
@@ -75,11 +75,11 @@ class TodoItem:
 @dataclass(frozen=True)
 class Email:
     value: str
-    
+
     def __post_init__(self):
         if not self._is_valid_email(self.value):
             raise ValueError("Invalid email format")
-    
+
     def _is_valid_email(self, email: str) -> bool:
         return "@" in email and "." in email.split("@")[1]
 ```
@@ -100,11 +100,11 @@ class TodoRepository(ABC):
     @abstractmethod
     def save(self, todo: TodoItem) -> None:
         pass
-    
+
     @abstractmethod
     def find_by_id(self, todo_id: TodoId) -> Optional[TodoItem]:
         pass
-    
+
     @abstractmethod
     def find_active_todos(self) -> List[TodoItem]:
         pass
@@ -122,14 +122,14 @@ class TodoRepository(ABC):
 class TodoApplicationService:
     def __init__(self, todo_repo: TodoRepository):
         self.todo_repo = todo_repo
-    
+
     def create_todo(self, request: CreateTodoRequest) -> TodoResponse:
         # Convert DTO to domain object
         todo = TodoItem(request.title, request.description)
-        
+
         # Use domain service if needed
         self.todo_repo.save(todo)
-        
+
         # Convert domain object to DTO
         return TodoResponse.from_domain(todo)
 ```

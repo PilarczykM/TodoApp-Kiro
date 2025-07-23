@@ -1,0 +1,97 @@
+# Pre-commit configuration for Todo App
+# This configuration runs all quality checks from make pre-commit
+# See https://pre-commit.com for more information
+
+repos:
+  # Ruff - Python linting and formatting
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.12.4
+    hooks:
+      # Run the linter
+      - id: ruff
+        name: ruff lint
+        args: [--fix]
+        types: [python]
+        files: ^(src/|tests/).*\.py$
+
+      # Run the formatter
+      - id: ruff-format
+        name: ruff format
+        types: [python]
+        files: ^(src/|tests/).*\.py$
+
+  # MyPy - Static type checking
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.17.0
+    hooks:
+      - id: mypy
+        name: mypy type check
+        files: ^src/.*\.py$
+        additional_dependencies: [pydantic>=2.0]
+        args: [--config-file=pyproject.toml]
+
+  # Pytest - Run tests with coverage
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest with coverage
+        entry: uv run pytest
+        language: system
+        types: [python]
+        files: ^(src/|tests/).*\.py$
+        args: [tests/, --cov=src, --cov-report=term-missing, --cov-fail-under=100, -v]
+        pass_filenames: false
+        always_run: true
+
+  # Built-in hooks for general file quality
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      # General file checks
+      - id: trailing-whitespace
+        name: trim trailing whitespace
+      - id: end-of-file-fixer
+        name: fix end of files
+      - id: check-yaml
+        name: check yaml syntax
+      - id: check-toml
+        name: check toml syntax
+      - id: check-json
+        name: check json syntax
+      - id: check-merge-conflict
+        name: check for merge conflicts
+      - id: check-added-large-files
+        name: check for large files
+        args: [--maxkb=1000]
+
+      # Python-specific checks
+      - id: check-ast
+        name: check python ast
+        types: [python]
+      - id: debug-statements
+        name: check for debug statements
+        types: [python]
+      - id: name-tests-test
+        name: check test naming
+        files: ^tests/.*\.py$
+        args: [--pytest-test-first]
+
+
+
+# Configuration for pre-commit
+default_stages: [pre-commit]
+fail_fast: false
+minimum_pre_commit_version: 4.0.0
+
+# CI configuration
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false
