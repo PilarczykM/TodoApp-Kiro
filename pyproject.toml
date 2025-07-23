@@ -33,7 +33,9 @@ todo = "src.main:main"
 
 [tool.ruff]
 target-version = "py312"
-line-length = 88
+line-length = 120
+
+[tool.ruff.lint]
 select = [
     "E",   # pycodestyle errors
     "W",   # pycodestyle warnings
@@ -56,11 +58,11 @@ ignore = [
     "T201",  # print found (allow for CLI app)
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]
 "tests/**/*" = ["B011", "S101", "T201"]  # Allow assert and print in tests
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["src"]
 
 [tool.mypy]

@@ -43,14 +43,14 @@
     - _Requirements: 10.1, 10.2, 10.4_
   - **⚠️ WAIT FOR CONFIRMATION BEFORE PROCEEDING TO TASK 3**
 
-- [-] 3. Implement domain layer with TDD
+- [x] 3. Implement domain layer with TDD
   - **Branch**: `feat/domain-layer`
   - [x] 3.1 Create domain exceptions and base classes
     - [ ] Write failing tests for TodoDomainError, TodoNotFoundError, and ValidationError exceptions (commit: "Add failing tests for domain exceptions")
     - [ ] Implement domain exception classes with proper inheritance (commit: "Implement domain exception classes")
     - _Requirements: 7.1, 7.2, 8.1_
 
-  - [-] 3.2 Implement TodoItem model with Pydantic validation
+  - [x] 3.2 Implement TodoItem model with Pydantic validation
     - [ ] Write failing tests for TodoItem creation, validation rules, and business methods (commit: "Add failing tests for TodoItem model")
     - [ ] Implement TodoItem class with all fields, validators, and business logic methods (commit: "Implement TodoItem model with Pydantic validation")
     - [ ] Test edge cases for due date validation and field constraints (commit: "Add edge case tests for TodoItem validation")
