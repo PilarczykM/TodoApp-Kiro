@@ -43,7 +43,7 @@
     - _Requirements: 10.1, 10.2, 10.4_
   - **⚠️ WAIT FOR CONFIRMATION BEFORE PROCEEDING TO TASK 3**
 
-- [ ] 3. Implement domain layer with TDD
+- [-] 3. Implement domain layer with TDD
   - **Branch**: `feat/domain-layer`
   - [ ] 3.1 Create domain exceptions and base classes
     - [ ] Write failing tests for TodoDomainError, TodoNotFoundError, and ValidationError exceptions (commit: "Add failing tests for domain exceptions")
