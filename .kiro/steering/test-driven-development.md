@@ -24,32 +24,32 @@ class TestTodoItem:
     def test_should_create_todo_with_pending_status(self):
         # Arrange & Act
         todo = TodoItem("Buy groceries", "Milk, eggs, bread")
-        
+
         # Assert
         assert todo.title == "Buy groceries"
         assert todo.status == TodoStatus.PENDING
         assert todo.created_at is not None
-    
+
     def test_should_complete_pending_todo(self):
         # Arrange
         todo = TodoItem("Task", "Description")
-        
+
         # Act
         todo.complete()
-        
+
         # Assert
         assert todo.status == TodoStatus.COMPLETED
         assert todo.completed_at is not None
-    
+
     def test_should_raise_error_when_completing_already_completed_todo(self):
         # Arrange
         todo = TodoItem("Task", "Description")
         todo.complete()
-        
+
         # Act & Assert
         with pytest.raises(DomainError, match="already completed"):
             todo.complete()
-    
+
     def test_should_raise_error_for_empty_title(self):
         # Act & Assert
         with pytest.raises(DomainError, match="Title cannot be empty"):
@@ -64,27 +64,27 @@ class TestTodoApplicationService:
     def setup_method(self):
         self.mock_repo = Mock(spec=TodoRepository)
         self.service = TodoApplicationService(self.mock_repo)
-    
+
     def test_should_create_todo_successfully(self):
         # Arrange
         request = CreateTodoRequest("Buy milk", "From grocery store")
-        
+
         # Act
         response = self.service.create_todo(request)
-        
+
         # Assert
         assert response.title == "Buy milk"
         assert response.status == "PENDING"
         self.mock_repo.save.assert_called_once()
-    
+
     def test_should_handle_domain_validation_errors(self):
         # Arrange
         request = CreateTodoRequest("", "Empty title")
-        
+
         # Act & Assert
         with pytest.raises(ValidationError):
             self.service.create_todo(request)
-        
+
         self.mock_repo.save.assert_not_called()
 ```
 
@@ -96,18 +96,18 @@ class TestJsonTodoRepository:
     def setup_method(self):
         self.temp_file = tempfile.NamedTemporaryFile(delete=False)
         self.repo = JsonTodoRepository(self.temp_file.name)
-    
+
     def teardown_method(self):
         os.unlink(self.temp_file.name)
-    
+
     def test_should_save_and_retrieve_todo(self):
         # Arrange
         todo = TodoItem("Test task", "Test description")
-        
+
         # Act
         self.repo.save(todo)
         retrieved = self.repo.find_by_id(todo.id)
-        
+
         # Assert
         assert retrieved is not None
         assert retrieved.title == "Test task"
@@ -147,22 +147,22 @@ def test_validation(self):
 ```python
 class TestTodoItem:
     """Test suite for TodoItem domain entity"""
-    
+
     class TestCreation:
         """Tests for todo item creation"""
-        
+
         def test_should_create_with_valid_data(self):
             pass
-        
+
         def test_should_reject_empty_title(self):
             pass
-    
+
     class TestCompletion:
         """Tests for todo completion behavior"""
-        
+
         def test_should_complete_pending_todo(self):
             pass
-        
+
         def test_should_reject_completing_completed_todo(self):
             pass
 ```
@@ -178,9 +178,9 @@ class TestTodoItem:
 def test_should_save_todo_to_repository(self):
     mock_repo = Mock(spec=TodoRepository)
     service = TodoApplicationService(mock_repo)
-    
+
     service.create_todo(CreateTodoRequest("Task", "Description"))
-    
+
     mock_repo.save.assert_called_once()
 
 # Avoid: Mocking domain objects
@@ -363,7 +363,7 @@ repos:
   run: |
     pytest --cov=src tests/
     pytest --cov-report=xml
-    
+
 - name: Upload coverage
   uses: codecov/codecov-action@v1
 ```
