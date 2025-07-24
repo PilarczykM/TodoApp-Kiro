@@ -12,6 +12,7 @@ import pytest
 
 from src.application.services.todo_service import TodoService
 from src.domain.exceptions import TodoDomainError, ValidationError
+from src.domain.models import TodoItem
 from src.infrastructure.persistence.repository import TodoRepository
 
 
@@ -213,3 +214,96 @@ class TestCreateTodoUseCase:
         assert before_creation <= result.created_at <= after_creation
         assert before_creation <= result.updated_at <= after_creation
         assert result.created_at == result.updated_at  # Should be same on creation
+
+
+class TestListTodosUseCase:
+    """Test suite for list todos use case."""
+
+    def setup_method(self):
+        """Set up test dependencies for each test method."""
+        self.mock_repo = Mock(spec=TodoRepository)
+        self.service = TodoService(self.mock_repo)
+
+    def test_should_retrieve_all_todos_when_todos_exist(self):
+        """Test retrieving all todos when repository contains todos."""
+        # Arrange
+        todo1 = TodoItem(title="Task 1", description="First task")
+        todo2 = TodoItem(title="Task 2", description="Second task")
+        expected_todos = [todo1, todo2]
+        self.mock_repo.find_all.return_value = expected_todos
+
+        # Act
+        result = self.service.get_all_todos()
+
+        # Assert
+        assert result == expected_todos
+        assert len(result) == 2
+        assert result[0].title == "Task 1"
+        assert result[1].title == "Task 2"
+        self.mock_repo.find_all.assert_called_once()
+
+    def test_should_return_empty_list_when_no_todos_exist(self):
+        """Test retrieving todos when repository is empty."""
+        # Arrange
+        self.mock_repo.find_all.return_value = []
+
+        # Act
+        result = self.service.get_all_todos()
+
+        # Assert
+        assert result == []
+        assert len(result) == 0
+        self.mock_repo.find_all.assert_called_once()
+
+    def test_should_handle_repository_find_all_errors(self):
+        """Test handling of repository find_all errors."""
+        # Arrange
+        from src.domain.exceptions import TodoDomainError
+
+        self.mock_repo.find_all.side_effect = TodoDomainError("Database error")
+
+        # Act & Assert
+        with pytest.raises(TodoDomainError, match="Database error"):
+            self.service.get_all_todos()
+
+        self.mock_repo.find_all.assert_called_once()
+
+    def test_should_return_todos_with_all_properties(self):
+        """Test that returned todos contain all expected properties."""
+        # Arrange
+        from datetime import datetime, timedelta
+
+        due_date = datetime.now() + timedelta(days=1)
+        todo = TodoItem(title="Complete task", description="Task description", due_date=due_date, completed=True)
+        self.mock_repo.find_all.return_value = [todo]
+
+        # Act
+        result = self.service.get_all_todos()
+
+        # Assert
+        assert len(result) == 1
+        returned_todo = result[0]
+        assert returned_todo.title == "Complete task"
+        assert returned_todo.description == "Task description"
+        assert returned_todo.due_date == due_date
+        assert returned_todo.completed is True
+        assert returned_todo.id is not None
+        assert returned_todo.created_at is not None
+        assert returned_todo.updated_at is not None
+
+    def test_should_preserve_todo_order_from_repository(self):
+        """Test that todos are returned in the same order as from repository."""
+        # Arrange
+        todo1 = TodoItem(title="First")
+        todo2 = TodoItem(title="Second")
+        todo3 = TodoItem(title="Third")
+        expected_order = [todo1, todo2, todo3]
+        self.mock_repo.find_all.return_value = expected_order
+
+        # Act
+        result = self.service.get_all_todos()
+
+        # Assert
+        assert result == expected_order
+        for i, todo in enumerate(result):
+            assert todo.title == expected_order[i].title

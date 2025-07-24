@@ -91,3 +91,18 @@ class TodoService:
                     error_messages.append(f"{field_name}: {error['msg']}")
 
             raise ValidationError("; ".join(error_messages)) from e
+
+    def get_all_todos(self) -> list[TodoItem]:
+        """
+        Retrieve all todo items.
+
+        This method orchestrates the retrieval of all todo items from
+        the repository.
+
+        Returns:
+            A list of all TodoItem instances, empty list if none exist
+
+        Raises:
+            TodoDomainError: If the retrieval operation fails
+        """
+        return self.repository.find_all()
