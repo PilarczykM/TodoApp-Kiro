@@ -7,16 +7,14 @@ serialization, deserialization, and file I/O operations while maintaining
 the domain contract.
 """
 
-import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
 from uuid import UUID
 
 from lxml import etree
 
+from src.domain.exceptions import TodoDomainError, TodoNotFoundError
 from src.domain.models import TodoItem
-from src.domain.exceptions import TodoNotFoundError, TodoDomainError
 from src.infrastructure.persistence.repository import TodoRepository
 
 
@@ -59,7 +57,7 @@ class XMLTodoRepository(TodoRepository):
             elif self.file_path.stat().st_size == 0:
                 # Handle empty file
                 self._create_empty_xml()
-        except (OSError, IOError) as e:
+        except OSError as e:
             raise TodoDomainError(f"Failed to initialize XML file: {e}") from e
 
     def _create_empty_xml(self) -> None:
@@ -72,13 +70,8 @@ class XMLTodoRepository(TodoRepository):
         try:
             root = etree.Element("todos")
             tree = etree.ElementTree(root)
-            tree.write(
-                str(self.file_path),
-                encoding="utf-8",
-                xml_declaration=True,
-                pretty_print=True
-            )
-        except (OSError, IOError) as e:
+            tree.write(str(self.file_path), encoding="utf-8", xml_declaration=True, pretty_print=True)
+        except OSError as e:
             raise TodoDomainError(f"Failed to create XML file: {e}") from e
 
     def _load_xml_tree(self) -> etree._ElementTree:
@@ -93,7 +86,7 @@ class XMLTodoRepository(TodoRepository):
         """
         try:
             return etree.parse(str(self.file_path))
-        except (OSError, IOError) as e:
+        except OSError as e:
             raise TodoDomainError(f"Failed to read XML file: {e}") from e
         except etree.XMLSyntaxError as e:
             raise TodoDomainError(f"Invalid XML format: {e}") from e
@@ -109,13 +102,8 @@ class XMLTodoRepository(TodoRepository):
             TodoDomainError: If file writing fails
         """
         try:
-            tree.write(
-                str(self.file_path),
-                encoding="utf-8",
-                xml_declaration=True,
-                pretty_print=True
-            )
-        except (OSError, IOError) as e:
+            tree.write(str(self.file_path), encoding="utf-8", xml_declaration=True, pretty_print=True)
+        except OSError as e:
             raise TodoDomainError(f"Failed to write XML file: {e}") from e
 
     def _todo_to_xml_element(self, todo: TodoItem) -> etree._Element:
@@ -129,22 +117,42 @@ class XMLTodoRepository(TodoRepository):
             XML element representation of the todo
         """
         todo_elem = etree.Element("todo")
-        
+
         # Add required fields
         etree.SubElement(todo_elem, "id").text = str(todo.id)
         etree.SubElement(todo_elem, "title").text = todo.title
         etree.SubElement(todo_elem, "completed").text = str(todo.completed).lower()
         etree.SubElement(todo_elem, "created_at").text = todo.created_at.isoformat()
         etree.SubElement(todo_elem, "updated_at").text = todo.updated_at.isoformat()
-        
+
         # Add optional fields
         if todo.description is not None:
             etree.SubElement(todo_elem, "description").text = todo.description
-        
+
         if todo.due_date is not None:
             etree.SubElement(todo_elem, "due_date").text = todo.due_date.isoformat()
-        
+
         return todo_elem
+
+    def _extract_required_text(self, parent: etree._Element, tag: str) -> tuple[str, str | None]:
+        """
+        Extract required text content from XML element.
+
+        Args:
+            parent: Parent XML element
+            tag: Tag name to find
+
+        Returns:
+            Tuple of (text_value, error_message). Error message is None if successful.
+        """
+        elem = parent.find(tag)
+        if elem is None:
+            return "", f"Missing required '{tag}' element"
+
+        if elem.text is None:
+            return "", f"Missing text content in '{tag}' element"
+
+        return elem.text, None
 
     def _xml_element_to_todo(self, todo_elem: etree._Element) -> TodoItem:
         """
@@ -160,33 +168,48 @@ class XMLTodoRepository(TodoRepository):
             TodoDomainError: If data conversion fails
         """
         try:
-            # Extract required fields
-            id_elem = todo_elem.find("id")
-            title_elem = todo_elem.find("title")
-            completed_elem = todo_elem.find("completed")
-            created_at_elem = todo_elem.find("created_at")
-            updated_at_elem = todo_elem.find("updated_at")
-            
-            if any(elem is None for elem in [id_elem, title_elem, completed_elem, created_at_elem, updated_at_elem]):
-                raise ValueError("Missing required XML elements")
-            
+            # Extract required fields using helper function
+            id_text, id_error = self._extract_required_text(todo_elem, "id")
+            if id_error:
+                raise ValueError(id_error)
+
+            title_text, title_error = self._extract_required_text(todo_elem, "title")
+            if title_error:
+                raise ValueError(title_error)
+
+            completed_text, completed_error = self._extract_required_text(todo_elem, "completed")
+            if completed_error:
+                raise ValueError(completed_error)
+
+            created_at_text, created_at_error = self._extract_required_text(todo_elem, "created_at")
+            if created_at_error:
+                raise ValueError(created_at_error)
+
+            updated_at_text, updated_at_error = self._extract_required_text(todo_elem, "updated_at")
+            if updated_at_error:
+                raise ValueError(updated_at_error)
+
             # Extract optional fields
             description_elem = todo_elem.find("description")
             due_date_elem = todo_elem.find("due_date")
-            
+
+            # Handle optional fields safely
+            description_text = description_elem.text if description_elem is not None else None
+            due_date_text = due_date_elem.text if due_date_elem is not None else None
+
             return TodoItem(
-                id=UUID(id_elem.text),
-                title=title_elem.text,
-                description=description_elem.text if description_elem is not None else None,
-                due_date=datetime.fromisoformat(due_date_elem.text) if due_date_elem is not None else None,
-                completed=completed_elem.text.lower() == "true",
-                created_at=datetime.fromisoformat(created_at_elem.text),
-                updated_at=datetime.fromisoformat(updated_at_elem.text)
+                id=UUID(id_text),
+                title=title_text,
+                description=description_text,
+                due_date=datetime.fromisoformat(due_date_text) if due_date_text is not None else None,
+                completed=completed_text.lower() == "true",
+                created_at=datetime.fromisoformat(created_at_text),
+                updated_at=datetime.fromisoformat(updated_at_text),
             )
         except (ValueError, TypeError, AttributeError) as e:
             raise TodoDomainError(f"Failed to convert XML element to TodoItem: {e}") from e
 
-    def _find_todo_element_by_id(self, root: etree._Element, todo_id: UUID) -> Optional[etree._Element]:
+    def _find_todo_element_by_id(self, root: etree._Element, todo_id: UUID) -> etree._Element | None:
         """
         Find todo XML element by ID.
 
@@ -218,22 +241,23 @@ class XMLTodoRepository(TodoRepository):
         """
         tree = self._load_xml_tree()
         root = tree.getroot()
-        
+
         # Find existing todo element by ID and replace, or append if new
         existing_elem = self._find_todo_element_by_id(root, todo.id)
         new_elem = self._todo_to_xml_element(todo)
-        
+
         if existing_elem is not None:
             # Replace existing element
             parent = existing_elem.getparent()
-            parent.replace(existing_elem, new_elem)
+            if parent is not None:
+                parent.replace(existing_elem, new_elem)
         else:
             # Append new element
             root.append(new_elem)
-        
+
         self._save_xml_tree(tree)
 
-    def find_by_id(self, todo_id: UUID) -> Optional[TodoItem]:
+    def find_by_id(self, todo_id: UUID) -> TodoItem | None:
         """
         Find a todo item by its unique identifier.
 
@@ -248,14 +272,14 @@ class XMLTodoRepository(TodoRepository):
         """
         tree = self._load_xml_tree()
         root = tree.getroot()
-        
+
         todo_elem = self._find_todo_element_by_id(root, todo_id)
         if todo_elem is not None:
             return self._xml_element_to_todo(todo_elem)
-        
+
         return None
 
-    def find_all(self) -> List[TodoItem]:
+    def find_all(self) -> list[TodoItem]:
         """
         Retrieve all todo items from the repository.
 
@@ -267,11 +291,11 @@ class XMLTodoRepository(TodoRepository):
         """
         tree = self._load_xml_tree()
         root = tree.getroot()
-        
+
         todos = []
         for todo_elem in root.findall("todo"):
             todos.append(self._xml_element_to_todo(todo_elem))
-        
+
         return todos
 
     def update(self, todo: TodoItem) -> None:
@@ -287,16 +311,17 @@ class XMLTodoRepository(TodoRepository):
         """
         tree = self._load_xml_tree()
         root = tree.getroot()
-        
+
         existing_elem = self._find_todo_element_by_id(root, todo.id)
         if existing_elem is None:
             raise TodoNotFoundError(f"Todo with ID {todo.id} not found")
-        
+
         # Replace existing element with updated one
         new_elem = self._todo_to_xml_element(todo)
         parent = existing_elem.getparent()
-        parent.replace(existing_elem, new_elem)
-        
+        if parent is not None:
+            parent.replace(existing_elem, new_elem)
+
         self._save_xml_tree(tree)
 
     def delete(self, todo_id: UUID) -> None:
@@ -312,15 +337,16 @@ class XMLTodoRepository(TodoRepository):
         """
         tree = self._load_xml_tree()
         root = tree.getroot()
-        
+
         todo_elem = self._find_todo_element_by_id(root, todo_id)
         if todo_elem is None:
             raise TodoNotFoundError(f"Todo with ID {todo_id} not found")
-        
+
         # Remove element from parent
         parent = todo_elem.getparent()
-        parent.remove(todo_elem)
-        
+        if parent is not None:
+            parent.remove(todo_elem)
+
         self._save_xml_tree(tree)
 
     def exists(self, todo_id: UUID) -> bool:
@@ -338,5 +364,5 @@ class XMLTodoRepository(TodoRepository):
         """
         tree = self._load_xml_tree()
         root = tree.getroot()
-        
+
         return self._find_todo_element_by_id(root, todo_id) is not None

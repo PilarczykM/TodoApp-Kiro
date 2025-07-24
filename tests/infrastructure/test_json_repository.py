@@ -269,3 +269,114 @@ class TestJSONTodoRepository:
         assert isinstance(retrieved_todo.completed, bool)
         assert isinstance(retrieved_todo.created_at, datetime)
         assert isinstance(retrieved_todo.updated_at, datetime)
+
+    def test_should_create_parent_directory_if_not_exists(self):
+        """Should create parent directory if it doesn't exist."""
+        nested_path = self.temp_path.parent / "nested" / "deep" / "test.json"
+
+        # Create repository with nested path
+        JSONTodoRepository(str(nested_path))
+
+        # Should create the file and parent directories
+        assert nested_path.exists()
+        assert nested_path.parent.exists()
+
+    def test_should_handle_non_list_data_in_json_file(self):
+        """Should handle non-list data in JSON file by returning empty list."""
+        # Write non-list data to file
+        with open(self.temp_path, "w") as f:
+            json.dump({"not": "a list"}, f)
+
+        todos = self.repo.find_all()
+        assert todos == []
+
+    def test_should_handle_json_serializer_error(self):
+        """Should raise TypeError for non-serializable objects in JSON serializer."""
+
+        # Test the _json_serializer method directly
+        class NonSerializable:
+            pass
+
+        with pytest.raises(TypeError, match="Object of type .* is not JSON serializable"):
+            self.repo._json_serializer(NonSerializable())
+
+    def test_should_handle_data_conversion_errors_in_dict_to_todo(self):
+        """Should handle data conversion errors when converting dict to TodoItem."""
+        # Create invalid data that will cause conversion errors
+        invalid_data = {
+            "id": "invalid-uuid",  # Invalid UUID format
+            "title": "Test",
+            "completed": False,
+            "created_at": "invalid-date",  # Invalid date format
+            "updated_at": "2025-01-01T00:00:00",
+        }
+
+        with pytest.raises(TodoDomainError, match="Failed to convert data to TodoItem"):
+            self.repo._dict_to_todo(invalid_data)
+
+    def test_should_handle_missing_required_fields_in_dict_to_todo(self):
+        """Should handle missing required fields when converting dict to TodoItem."""
+        # Create data missing required fields
+        incomplete_data = {
+            "id": str(uuid4()),
+            "title": "Test",
+            # Missing required fields: completed, created_at, updated_at
+        }
+
+        with pytest.raises(TodoDomainError, match="Failed to convert data to TodoItem"):
+            self.repo._dict_to_todo(incomplete_data)
+
+    def test_should_handle_file_creation_errors_in_ensure_file_exists(self):
+        """Should handle file creation errors in _ensure_file_exists."""
+        # Create a path that will cause permission errors
+        invalid_path = Path("/root/invalid/path/test.json")
+
+        with pytest.raises(TodoDomainError, match="Failed to initialize JSON file"):
+            JSONTodoRepository(str(invalid_path))
+
+    def test_should_handle_load_read_errors(self):
+        """Should handle read errors during load operation."""
+        # Mock the file opening to raise OSError
+        import unittest.mock
+
+        with (
+            unittest.mock.patch("builtins.open", side_effect=OSError("Read failed")),
+            pytest.raises(TodoDomainError, match="Failed to read JSON file"),
+        ):
+            self.repo.find_all()
+
+    def test_should_handle_json_decode_error_in_load(self):
+        """Should handle JSON decode errors during load operation."""
+        # Write invalid JSON that will cause JSONDecodeError
+        with open(self.temp_path, "w") as f:
+            f.write('{"invalid": json}')  # Invalid JSON syntax
+
+        with pytest.raises(TodoDomainError, match="Invalid JSON format"):
+            self.repo.find_all()
+
+    def test_should_handle_uuid_serialization_in_json_serializer(self):
+        """Should handle UUID serialization in _json_serializer."""
+        test_uuid = uuid4()
+        result = self.repo._json_serializer(test_uuid)
+        assert result == str(test_uuid)
+
+    def test_should_handle_datetime_serialization_in_json_serializer(self):
+        """Should handle datetime serialization in _json_serializer."""
+        test_date = datetime.now()
+        result = self.repo._json_serializer(test_date)
+        assert result == test_date.isoformat()
+
+    def test_should_update_existing_todo_in_save_method(self):
+        """Should update existing todo when saving with same ID."""
+        # Create and save a todo
+        todo = TodoItem(title="Original Title")
+        self.repo.save(todo)
+
+        # Modify and save again (should update, not create new)
+        todo.update_details(title="Updated Title")
+        self.repo.save(todo)
+
+        # Should still have only one todo
+        all_todos = self.repo.find_all()
+        assert len(all_todos) == 1
+        assert all_todos[0].title == "Updated Title"

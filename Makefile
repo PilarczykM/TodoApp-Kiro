@@ -40,17 +40,17 @@ type-check: ## Run type checking with mypy
 
 coverage: ## Run tests with coverage reporting
 	@echo "Running tests with coverage..."
-	uv run pytest tests/ --cov=src --cov-report=term-missing -v
+	uv run pytest tests/ --cov=src --cov-report=term-missing --cov-fail-under=95 -v
 	@echo "Coverage analysis completed!"
 
 coverage-html: ## Generate HTML coverage report
 	@echo "Generating HTML coverage report..."
-	uv run pytest tests/ --cov=src --cov-report=html --cov-report=term-missing -v
+	uv run pytest tests/ --cov=src --cov-report=html --cov-report=term-missing --cov-fail-under=95 -v
 	@echo "HTML coverage report generated in htmlcov/"
 
 coverage-xml: ## Generate XML coverage report for CI
 	@echo "Generating XML coverage report..."
-	uv run pytest tests/ --cov=src --cov-report=xml --cov-report=term-missing -v
+	uv run pytest tests/ --cov=src --cov-report=xml --cov-report=term-missing --cov-fail-under=95 -v
 	@echo "XML coverage report generated as coverage.xml"
 
 report: coverage-html ## Generate comprehensive coverage report
