@@ -140,15 +140,15 @@
     - _Requirements: 9.2, 9.4_
 
   - [x] 7.2 Implement main menu and navigation
-    - [ ] Write failing tests for menu display and user input handling (commit: "Add failing tests for main menu")
-    - [ ] Implement TodoCLI class with menu system and input validation (commit: "Implement TodoCLI main menu system")
-    - [ ] Test menu navigation and user choice processing (commit: "Add menu navigation tests")
+    - [x] Write failing tests for menu display and user input handling (commit: "Add failing tests for main menu")
+    - [x] Implement TodoCLI class with menu system and input validation (commit: "Implement TodoCLI main menu system")
+    - [x] Test menu navigation and user choice processing (commit: "Add menu navigation tests")
     - _Requirements: 9.1, 9.3, 9.5_
 
-  - [ ] 7.3 Implement add todo CLI workflow
-    - [ ] Write failing tests for add todo user interaction and input validation (commit: "Add failing tests for add todo CLI")
-    - [ ] Implement add todo CLI method with Rich prompts and error handling (commit: "Implement add todo CLI workflow")
-    - [ ] Test user input validation and success/error message display (commit: "Add add todo CLI validation tests")
+  - [x] 7.3 Implement add todo CLI workflow
+    - [x] Write failing tests for add todo user interaction and input validation (commit: "Add failing tests for add todo CLI")
+    - [x] Implement add todo CLI method with Rich prompts and error handling (commit: "Implement add todo CLI workflow")
+    - [x] Test user input validation and success/error message display (commit: "Add add todo CLI validation tests")
     - _Requirements: 1.1, 1.3, 1.5, 9.3, 9.4_
 
   - [ ] 7.4 Implement list todos CLI display
