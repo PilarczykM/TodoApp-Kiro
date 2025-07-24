@@ -263,9 +263,53 @@ class TodoCLI:
             return True
 
     def delete_todo(self) -> bool:
-        """Handle delete todo workflow - placeholder for now."""
-        self.console.print(f"[{ConsoleColors.INFO}]Delete Todo functionality coming soon![/{ConsoleColors.INFO}]")
-        return True
+        """
+        Handle delete todo workflow with ID prompting and confirmation.
+
+        Prompts user for todo ID, displays todo details, asks for confirmation,
+        and deletes the todo if confirmed. Handles validation errors gracefully
+        and displays success/error messages appropriately.
+
+        Returns:
+            True to continue the main menu loop
+        """
+        self.console.print()
+        self.console.print(Panel("[bold cyan]Delete Todo[/bold cyan]", border_style="cyan"))
+
+        try:
+            # Get todo ID from user
+            todo_id = self._prompt_for_delete_todo_id()
+            if todo_id is None:
+                return True
+
+            # Find existing todo to display details
+            existing_todo = self.service.repository.find_by_id(todo_id)
+            if existing_todo is None:
+                self._display_todo_not_found_error()
+                return True
+
+            # Display todo details before confirmation
+            self._display_todo_to_delete(existing_todo)
+
+            # Ask for confirmation
+            if not self._prompt_for_deletion_confirmation():
+                self._display_deletion_cancelled_message()
+                return True
+
+            # Delete todo through service
+            self.service.delete_todo(todo_id)
+
+            # Display success message
+            self._display_todo_deleted_success(existing_todo)
+            return True
+
+        except TodoDomainError as e:
+            self._display_domain_error(e)
+            return True
+
+        except Exception as e:
+            self._display_unexpected_error(e)
+            return True
 
     def _exit_application(self) -> bool:
         """Handle application exit."""
@@ -549,3 +593,83 @@ class TodoCLI:
 
         self.console.print(success_message)
         self.console.print(Panel(details.strip(), title="Completion Confirmed", border_style="green"))
+
+    def _prompt_for_delete_todo_id(self) -> "UUID | None":
+        """
+        Prompt user for todo ID to delete and parse to UUID.
+
+        Returns:
+            UUID if valid, None if invalid format
+        """
+        id_input = Prompt.ask("\n[bold]Enter the ID of the todo to delete[/bold]", default="")
+
+        if not id_input.strip():
+            self.console.print(f"[{ConsoleColors.ERROR}]Todo ID is required.[/{ConsoleColors.ERROR}]")
+            return None
+
+        try:
+            return UUID(id_input.strip())
+        except ValueError:
+            self.console.print(
+                f"[{ConsoleColors.ERROR}]Invalid ID format. Please enter a valid UUID.[/{ConsoleColors.ERROR}]"
+            )
+            return None
+
+    def _display_todo_to_delete(self, todo: "TodoItem") -> None:
+        """Display todo details before asking for deletion confirmation."""
+        due_date_str = todo.due_date.strftime("%Y-%m-%d") if todo.due_date else "No due date"
+
+        todo_details = f"""
+[bold red]⚠️  WARNING: This todo will be permanently deleted![/bold red]
+
+[bold]Todo to Delete:[/bold]
+
+[bold]Title:[/bold] {todo.title}
+[bold]Description:[/bold] {todo.description or "No description"}
+[bold]Due Date:[/bold] {due_date_str}
+[bold]Status:[/bold] {"✅ Completed" if todo.completed else "⏳ Pending"}
+        """
+
+        self.console.print(Panel(todo_details.strip(), title="Deletion Confirmation", border_style="red"))
+
+    def _prompt_for_deletion_confirmation(self) -> bool:
+        """
+        Prompt user for deletion confirmation.
+
+        Returns:
+            True if user confirms deletion, False otherwise
+        """
+        confirmation = (
+            Prompt.ask(
+                "\n[bold red]Are you sure you want to delete this todo? This action cannot be undone![/bold red]\n"
+                "[bold]Type 'yes' or 'y' to confirm, anything else to cancel[/bold]",
+                default="n",
+            )
+            .strip()
+            .lower()
+        )
+
+        return confirmation in ("y", "yes")
+
+    def _display_deletion_cancelled_message(self) -> None:
+        """Display message when deletion is cancelled."""
+        cancel_message = f"[{ConsoleColors.INFO}]✋ Deletion cancelled. Todo was not deleted.[/{ConsoleColors.INFO}]"
+        self.console.print(Panel(cancel_message, title="Cancelled", border_style="yellow"))
+
+    def _display_todo_deleted_success(self, todo: "TodoItem") -> None:
+        """Display success message after todo deletion."""
+        success_message = (
+            f"[{ConsoleColors.SUCCESS}]✅ Todo '{todo.title}' has been permanently deleted![/{ConsoleColors.SUCCESS}]"
+        )
+
+        details = f"""
+[bold]Deleted Todo:[/bold]
+
+[bold]Title:[/bold] {todo.title}
+[bold]ID:[/bold] {str(todo.id)[:8]}...
+[bold]Description:[/bold] {todo.description or "No description"}
+[bold]Due Date:[/bold] {todo.due_date.strftime("%Y-%m-%d") if todo.due_date else "No due date"}
+        """
+
+        self.console.print(success_message)
+        self.console.print(Panel(details.strip(), title="Deletion Confirmed", border_style="green"))

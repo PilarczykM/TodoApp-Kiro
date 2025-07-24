@@ -102,14 +102,10 @@ class TestTodoCLIMenuSystem:
 class TestTodoCLIWorkflowMethods:
     """Test suite for todo workflow methods."""
 
-    @pytest.mark.parametrize("method_name", ["delete_todo"])
-    def test_workflow_methods_return_true(self, cli_with_mocked_console, method_name):
-        """Test that workflow methods return True to continue loop."""
-        method = getattr(cli_with_mocked_console, method_name)
-        result = method()
-
-        assert result is True
-        cli_with_mocked_console.console.print.assert_called_once()
+    def test_placeholder_methods_return_true(self, cli_with_mocked_console):
+        """Test that placeholder methods return True to continue loop."""
+        # All workflow methods are now fully implemented
+        pass
 
 
 class TestTodoCLIMainLoop:
@@ -1002,4 +998,233 @@ class TestCompleteTodoWorkflow:
         # Test error case
         cli_with_mocked_console.service.complete_todo.side_effect = TodoNotFoundError("Not found")
         result = cli_with_mocked_console.complete_todo()
+        assert result is True
+
+
+class TestDeleteTodoWorkflow:
+    """Test suite for delete todo CLI workflow."""
+
+    def test_should_prompt_for_todo_id_and_confirmation(self, cli_with_mocked_console, mock_prompt):
+        """Test that delete_todo prompts for ID and confirmation."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_prompt.side_effect = [
+            str(todo_id),  # todo ID
+            "y",  # confirmation
+        ]
+
+        # Mock existing todo for display
+        mock_todo = TodoItem(id=todo_id, title="Test Todo", completed=False)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+
+        result = cli_with_mocked_console.delete_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.delete_todo.assert_called_once_with(todo_id)
+
+    def test_should_display_todo_details_before_confirmation(self, cli_with_mocked_console, mock_prompt):
+        """Test that todo details are shown before asking for confirmation."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        todo_title = "Important Task"
+        mock_prompt.side_effect = [str(todo_id), "y"]
+
+        mock_todo = TodoItem(id=todo_id, title=todo_title, completed=False)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+
+        result = cli_with_mocked_console.delete_todo()
+
+        assert result is True
+        # Should display todo details
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        title_found = any(todo_title in str(call) for call in print_calls)
+        assert title_found
+
+    def test_should_cancel_deletion_on_no_confirmation(self, cli_with_mocked_console, mock_prompt):
+        """Test that deletion is cancelled when user says no."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_prompt.side_effect = [
+            str(todo_id),  # todo ID
+            "n",  # no confirmation
+        ]
+
+        mock_todo = TodoItem(id=todo_id, title="Test Todo", completed=False)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+
+        result = cli_with_mocked_console.delete_todo()
+
+        assert result is True
+        # Should not call delete service
+        cli_with_mocked_console.service.delete_todo.assert_not_called()
+        # Should display cancellation message (Panel content is not directly accessible in mock)
+        # Check that console.print was called (cancellation panel was displayed)
+        assert cli_with_mocked_console.console.print.call_count >= 3  # Header + todo details + cancellation
+
+    def test_should_handle_invalid_uuid_format(self, cli_with_mocked_console, mock_prompt):
+        """Test that invalid UUID format is handled gracefully."""
+        mock_prompt.side_effect = ["invalid-uuid-format"]
+
+        result = cli_with_mocked_console.delete_todo()
+
+        assert result is True
+        # Should not call service methods
+        cli_with_mocked_console.service.repository.find_by_id.assert_not_called()
+        cli_with_mocked_console.service.delete_todo.assert_not_called()
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_found = any("invalid id" in str(call).lower() for call in print_calls)
+        assert error_found
+
+    def test_should_handle_todo_not_found_error(self, cli_with_mocked_console, mock_prompt):
+        """Test that TodoNotFoundError is handled gracefully."""
+        from uuid import uuid4
+
+        todo_id = uuid4()
+        mock_prompt.side_effect = [str(todo_id)]
+
+        # Mock service to return None (todo not found)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = None
+
+        result = cli_with_mocked_console.delete_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.repository.find_by_id.assert_called_once_with(todo_id)
+        # Should not call delete
+        cli_with_mocked_console.service.delete_todo.assert_not_called()
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_found = any("not found" in str(call).lower() for call in print_calls)
+        assert error_found
+
+    def test_should_delete_todo_successfully_with_confirmation(self, cli_with_mocked_console, mock_prompt):
+        """Test that confirmed deletion removes todo successfully."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        todo_title = "Todo to Delete"
+        mock_prompt.side_effect = [str(todo_id), "yes"]
+
+        mock_todo = TodoItem(id=todo_id, title=todo_title, completed=False)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+
+        result = cli_with_mocked_console.delete_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.delete_todo.assert_called_once_with(todo_id)
+        # Should display success message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        success_found = any("deleted" in str(call).lower() for call in print_calls)
+        assert success_found
+
+    def test_should_handle_service_domain_error(self, cli_with_mocked_console, mock_prompt):
+        """Test that TodoDomainError is handled gracefully."""
+        from uuid import uuid4
+
+        from src.domain.exceptions import TodoDomainError
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_prompt.side_effect = [str(todo_id), "y"]
+
+        mock_todo = TodoItem(id=todo_id, title="Test Todo", completed=False)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+        cli_with_mocked_console.service.delete_todo.side_effect = TodoDomainError("Database error")
+
+        result = cli_with_mocked_console.delete_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.delete_todo.assert_called_once_with(todo_id)
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_found
+
+    def test_should_handle_unexpected_exceptions(self, cli_with_mocked_console, mock_prompt):
+        """Test that unexpected exceptions are handled gracefully."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_prompt.side_effect = [str(todo_id), "y"]
+
+        mock_todo = TodoItem(id=todo_id, title="Test Todo", completed=False)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+        cli_with_mocked_console.service.delete_todo.side_effect = Exception("Unexpected error")
+
+        result = cli_with_mocked_console.delete_todo()
+
+        assert result is True
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_found
+
+    @pytest.mark.parametrize("confirmation", ["y", "yes", "Y", "YES"])
+    def test_should_accept_various_confirmation_formats(self, cli_with_mocked_console, mock_prompt, confirmation):
+        """Test that various confirmation formats are accepted."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_prompt.side_effect = [str(todo_id), confirmation]
+
+        mock_todo = TodoItem(id=todo_id, title="Test Todo", completed=False)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+
+        result = cli_with_mocked_console.delete_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.delete_todo.assert_called_once_with(todo_id)
+
+    @pytest.mark.parametrize("rejection", ["n", "no", "N", "NO", ""])
+    def test_should_reject_various_rejection_formats(self, cli_with_mocked_console, mock_prompt, rejection):
+        """Test that various rejection formats cancel deletion."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_prompt.side_effect = [str(todo_id), rejection]
+
+        mock_todo = TodoItem(id=todo_id, title="Test Todo", completed=False)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+
+        result = cli_with_mocked_console.delete_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.delete_todo.assert_not_called()
+
+    def test_should_return_true_to_continue_menu_loop(self, cli_with_mocked_console, mock_prompt):
+        """Test that delete_todo always returns True to continue menu loop."""
+        from uuid import uuid4
+
+        from src.domain.exceptions import TodoNotFoundError
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_prompt.side_effect = [str(todo_id), "y"]
+
+        # Test successful case
+        mock_todo = TodoItem(id=todo_id, title="Test", completed=False)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+        result = cli_with_mocked_console.delete_todo()
+        assert result is True
+
+        # Test error case
+        cli_with_mocked_console.service.delete_todo.side_effect = TodoNotFoundError("Not found")
+        result = cli_with_mocked_console.delete_todo()
         assert result is True
