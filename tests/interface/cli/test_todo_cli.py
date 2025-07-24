@@ -102,7 +102,7 @@ class TestTodoCLIMenuSystem:
 class TestTodoCLIWorkflowMethods:
     """Test suite for todo workflow methods."""
 
-    @pytest.mark.parametrize("method_name", ["update_todo", "complete_todo", "delete_todo"])
+    @pytest.mark.parametrize("method_name", ["complete_todo", "delete_todo"])
     def test_workflow_methods_return_true(self, cli_with_mocked_console, method_name):
         """Test that workflow methods return True to continue loop."""
         method = getattr(cli_with_mocked_console, method_name)
@@ -588,3 +588,259 @@ class TestListTodosWorkflow:
         print_calls = cli_with_mocked_console.console.print.call_args_list
         error_message_found = any("error" in str(call).lower() for call in print_calls)
         assert error_message_found
+
+
+class TestUpdateTodoWorkflow:
+    """Test suite for update todo CLI workflow."""
+
+    def test_should_prompt_for_todo_id_and_display_current_values(self, cli_with_mocked_console, mock_prompt):
+        """Test that update_todo prompts for ID and shows current values."""
+        from datetime import datetime
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        # Mock existing todo
+        todo_id = uuid4()
+        mock_todo = TodoItem(
+            id=todo_id,
+            title="Current Title",
+            description="Current Description",
+            due_date=datetime(2025, 12, 31),
+            completed=False,
+        )
+
+        # Mock user inputs
+        mock_prompt.side_effect = [
+            str(todo_id),  # todo ID
+            "Updated Title",  # new title
+            "Updated Description",  # new description
+            "2026-01-15",  # new due date
+        ]
+
+        # Mock service responses
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+        updated_todo = TodoItem(
+            id=todo_id,
+            title="Updated Title",
+            description="Updated Description",
+            due_date=datetime(2026, 1, 15),
+            completed=False,
+        )
+        cli_with_mocked_console.service.update_todo.return_value = updated_todo
+
+        result = cli_with_mocked_console.update_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.repository.find_by_id.assert_called_once_with(todo_id)
+        cli_with_mocked_console.service.update_todo.assert_called_once()
+        cli_with_mocked_console.console.print.assert_called()
+
+    def test_should_handle_invalid_todo_id_format(self, cli_with_mocked_console, mock_prompt):
+        """Test that invalid UUID format is handled gracefully."""
+        # Mock user inputs - invalid UUID format
+        mock_prompt.side_effect = ["invalid-uuid-format"]
+
+        result = cli_with_mocked_console.update_todo()
+
+        assert result is True
+        # Should not call service methods
+        cli_with_mocked_console.service.repository.find_by_id.assert_not_called()
+        cli_with_mocked_console.service.update_todo.assert_not_called()
+        # Should display error message
+        cli_with_mocked_console.console.print.assert_called()
+
+    def test_should_handle_todo_not_found_error(self, cli_with_mocked_console, mock_prompt):
+        """Test that TodoNotFoundError is handled gracefully."""
+        from uuid import uuid4
+
+        todo_id = uuid4()
+        mock_prompt.side_effect = [str(todo_id)]
+
+        # Mock service to return None (todo not found)
+        cli_with_mocked_console.service.repository.find_by_id.return_value = None
+
+        result = cli_with_mocked_console.update_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.repository.find_by_id.assert_called_once_with(todo_id)
+        # Should not call update
+        cli_with_mocked_console.service.update_todo.assert_not_called()
+        # Should display error message
+        cli_with_mocked_console.console.print.assert_called()
+
+    def test_should_allow_partial_updates(self, cli_with_mocked_console, mock_prompt):
+        """Test that user can update only specific fields."""
+        from datetime import datetime
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_todo = TodoItem(
+            id=todo_id,
+            title="Current Title",
+            description="Current Description",
+            due_date=datetime(2025, 12, 31),
+            completed=False,
+        )
+
+        # Mock user inputs - only update title, keep others
+        mock_prompt.side_effect = [
+            str(todo_id),  # todo ID
+            "New Title",  # new title
+            "",  # keep current description
+            "",  # keep current due date
+        ]
+
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+        updated_todo = TodoItem(
+            id=todo_id,
+            title="New Title",
+            description="Current Description",
+            due_date=datetime(2025, 12, 31),
+            completed=False,
+        )
+        cli_with_mocked_console.service.update_todo.return_value = updated_todo
+
+        result = cli_with_mocked_console.update_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.update_todo.assert_called_once()
+        # Should call with only title updated
+        call_args = cli_with_mocked_console.service.update_todo.call_args
+        assert call_args[1]["title"] == "New Title"
+
+    def test_should_handle_validation_error_during_update(self, cli_with_mocked_console, mock_prompt):
+        """Test that validation errors are handled gracefully."""
+        from uuid import uuid4
+
+        from src.domain.exceptions import ValidationError
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_todo = TodoItem(id=todo_id, title="Current Title", completed=False)
+
+        mock_prompt.side_effect = [
+            str(todo_id),  # todo ID
+            "",  # empty title (invalid)
+            "",  # description
+            "",  # due date
+        ]
+
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+        cli_with_mocked_console.service.update_todo.side_effect = ValidationError("Title cannot be empty")
+
+        result = cli_with_mocked_console.update_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.update_todo.assert_called_once()
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_call_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_call_found
+
+    def test_should_display_success_message_after_update(self, cli_with_mocked_console, mock_prompt):
+        """Test that success message is displayed after successful update."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_todo = TodoItem(id=todo_id, title="Old Title", completed=False)
+
+        mock_prompt.side_effect = [
+            str(todo_id),
+            "New Title",
+            "New Description",
+            "",  # keep current due date
+        ]
+
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+        updated_todo = TodoItem(
+            id=todo_id,
+            title="New Title",
+            description="New Description",
+            completed=False,
+        )
+        cli_with_mocked_console.service.update_todo.return_value = updated_todo
+
+        result = cli_with_mocked_console.update_todo()
+
+        assert result is True
+        # Should display success message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        success_call_found = any("success" in str(call).lower() for call in print_calls)
+        assert success_call_found
+
+    def test_should_handle_invalid_due_date_format_in_update(self, cli_with_mocked_console, mock_prompt):
+        """Test that invalid due date format is handled during update."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_todo = TodoItem(id=todo_id, title="Current Title", completed=False)
+
+        mock_prompt.side_effect = [
+            str(todo_id),
+            "New Title",
+            "",  # description
+            "invalid-date",  # invalid date format
+            "2026-01-15",  # valid date format
+        ]
+
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+        updated_todo = TodoItem(id=todo_id, title="New Title", completed=False)
+        cli_with_mocked_console.service.update_todo.return_value = updated_todo
+
+        result = cli_with_mocked_console.update_todo()
+
+        assert result is True
+        # Should eventually succeed with valid date
+        cli_with_mocked_console.service.update_todo.assert_called_once()
+
+    def test_should_handle_service_domain_error_during_update(self, cli_with_mocked_console, mock_prompt):
+        """Test that TodoDomainError is handled gracefully."""
+        from uuid import uuid4
+
+        from src.domain.exceptions import TodoDomainError
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_todo = TodoItem(id=todo_id, title="Current Title", completed=False)
+
+        mock_prompt.side_effect = [str(todo_id), "New Title", "", ""]
+
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+        cli_with_mocked_console.service.update_todo.side_effect = TodoDomainError("Database error")
+
+        result = cli_with_mocked_console.update_todo()
+
+        assert result is True
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_call_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_call_found
+
+    def test_should_handle_unexpected_exceptions_during_update(self, cli_with_mocked_console, mock_prompt):
+        """Test that unexpected exceptions are handled gracefully."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_todo = TodoItem(id=todo_id, title="Current Title", completed=False)
+
+        mock_prompt.side_effect = [str(todo_id), "New Title", "", ""]
+
+        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
+        cli_with_mocked_console.service.update_todo.side_effect = Exception("Unexpected error")
+
+        result = cli_with_mocked_console.update_todo()
+
+        assert result is True
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_call_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_call_found

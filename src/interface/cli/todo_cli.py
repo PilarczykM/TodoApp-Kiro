@@ -7,6 +7,7 @@ including menu system, user input handling, and navigation.
 
 from datetime import datetime
 from typing import TYPE_CHECKING
+from uuid import UUID
 
 from rich.console import Console
 from rich.panel import Panel
@@ -170,9 +171,62 @@ class TodoCLI:
             return True
 
     def update_todo(self) -> bool:
-        """Handle update todo workflow - placeholder for now."""
-        self.console.print(f"[{ConsoleColors.INFO}]Update Todo functionality coming soon![/{ConsoleColors.INFO}]")
-        return True
+        """
+        Handle update todo workflow with ID prompting and field editing.
+
+        Prompts user for todo ID, displays current values, allows editing
+        of title, description, and due date fields. Handles validation
+        errors gracefully and displays success/error messages.
+
+        Returns:
+            True to continue the main menu loop
+        """
+        self.console.print()
+        self.console.print(Panel("[bold cyan]Update Todo[/bold cyan]", border_style="cyan"))
+
+        try:
+            # Get todo ID from user
+            todo_id = self._prompt_for_todo_id()
+            if todo_id is None:
+                return True
+
+            # Find existing todo
+            existing_todo = self.service.repository.find_by_id(todo_id)
+            if existing_todo is None:
+                self._display_todo_not_found_error()
+                return True
+
+            # Display current values
+            self._display_current_todo_values(existing_todo)
+
+            # Prompt for updates
+            title = self._prompt_for_updated_title(existing_todo.title)
+            description = self._prompt_for_updated_description(existing_todo.description)
+            due_date = self._prompt_for_updated_due_date(existing_todo.due_date)
+
+            # Update todo through service
+            updated_todo = self.service.update_todo(
+                todo_id=todo_id,
+                title=title if title != existing_todo.title else None,
+                description=description if description != existing_todo.description else None,
+                due_date=due_date if due_date != existing_todo.due_date else None,
+            )
+
+            # Display success message
+            self._display_todo_updated_success(updated_todo)
+            return True
+
+        except ValidationError as e:
+            self._display_validation_error(e)
+            return True
+
+        except TodoDomainError as e:
+            self._display_domain_error(e)
+            return True
+
+        except Exception as e:
+            self._display_unexpected_error(e)
+            return True
 
     def complete_todo(self) -> bool:
         """Handle complete todo workflow - placeholder for now."""
@@ -330,3 +384,99 @@ class TodoCLI:
             border_style="green",
         )
         self.console.print(goodbye_panel)
+
+    def _prompt_for_todo_id(self) -> "UUID | None":
+        """
+        Prompt user for todo ID and parse to UUID.
+
+        Returns:
+            UUID if valid, None if invalid format
+        """
+        id_input = Prompt.ask("[bold]Enter todo ID[/bold]", default="")
+
+        if not id_input.strip():
+            self.console.print(f"[{ConsoleColors.ERROR}]Todo ID is required.[/{ConsoleColors.ERROR}]")
+            return None
+
+        try:
+            return UUID(id_input.strip())
+        except ValueError:
+            self.console.print(
+                f"[{ConsoleColors.ERROR}]Invalid ID format. Please enter a valid UUID.[/{ConsoleColors.ERROR}]"
+            )
+            return None
+
+    def _display_current_todo_values(self, todo: "TodoItem") -> None:
+        """Display current todo values in a formatted panel."""
+        due_date_str = todo.due_date.strftime("%Y-%m-%d") if todo.due_date else "No due date"
+
+        current_values = f"""
+[bold]Current Values:[/bold]
+
+[bold]Title:[/bold] {todo.title}
+[bold]Description:[/bold] {todo.description or "No description"}
+[bold]Due Date:[/bold] {due_date_str}
+[bold]Status:[/bold] {"Completed" if todo.completed else "Pending"}
+
+[dim]Leave fields empty to keep current values[/dim]
+        """
+
+        self.console.print(Panel(current_values.strip(), title="Todo Details", border_style="blue"))
+
+    def _prompt_for_updated_title(self, current_title: str) -> str:
+        """Prompt for updated title with current value as default."""
+        new_title = Prompt.ask("[bold]Enter new title[/bold] [dim](or press Enter to keep current)[/dim]", default="")
+        return new_title.strip() if new_title.strip() else current_title
+
+    def _prompt_for_updated_description(self, current_description: str | None) -> str | None:
+        """Prompt for updated description with current value handling."""
+        current_desc_display = current_description or "No description"
+        new_description = Prompt.ask(
+            f"[bold]Enter new description[/bold] [dim](current: {current_desc_display})[/dim]", default=""
+        )
+        if not new_description.strip():
+            return current_description
+        return new_description.strip()
+
+    def _prompt_for_updated_due_date(self, current_due_date: datetime | None) -> datetime | None:
+        """Prompt for updated due date with current value handling."""
+        current_date_display = current_due_date.strftime("%Y-%m-%d") if current_due_date else "No due date"
+
+        date_input = Prompt.ask(
+            f"[bold]Enter new due date[/bold] [dim](YYYY-MM-DD, current: {current_date_display})[/dim]", default=""
+        )
+
+        if not date_input.strip():
+            return current_due_date
+
+        try:
+            return datetime.strptime(date_input.strip(), "%Y-%m-%d")
+        except ValueError:
+            self.console.print(
+                f"[{ConsoleColors.WARNING}]Invalid date format. Please use YYYY-MM-DD format.[/{ConsoleColors.WARNING}]"
+            )
+            return self._prompt_for_updated_due_date(current_due_date)
+
+    def _display_todo_not_found_error(self) -> None:
+        """Display error message when todo is not found."""
+        error_message = (
+            f"[{ConsoleColors.ERROR}]❌ Todo not found.[/{ConsoleColors.ERROR}] Please check the ID and try again."
+        )
+        self.console.print(error_message)
+
+    def _display_todo_updated_success(self, todo: "TodoItem") -> None:
+        """Display success message with updated todo details."""
+        success_message = f"[{ConsoleColors.SUCCESS}]✅ Todo updated successfully![/{ConsoleColors.SUCCESS}]"
+
+        details = f"""
+[bold]Updated Todo:[/bold]
+
+[bold]Title:[/bold] {todo.title}
+[bold]ID:[/bold] {str(todo.id)[:8]}...
+[bold]Description:[/bold] {todo.description or "No description"}
+[bold]Due Date:[/bold] {todo.due_date.strftime("%Y-%m-%d") if todo.due_date else "No due date"}
+[bold]Status:[/bold] {"Completed" if todo.completed else "Pending"}
+        """
+
+        self.console.print(success_message)
+        self.console.print(Panel(details.strip(), title="Updated Details", border_style="green"))
