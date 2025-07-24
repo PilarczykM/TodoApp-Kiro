@@ -8,8 +8,7 @@ to fulfill business use cases following Domain-Driven Design principles.
 from datetime import datetime
 from uuid import UUID
 
-from pydantic import ValidationError as PydanticValidationError
-
+from src.application.services.todo_factory import TodoItemFactory
 from src.domain.exceptions import TodoNotFoundError, ValidationError
 from src.domain.models import TodoItem
 from src.infrastructure.persistence.repository import TodoRepository
@@ -61,37 +60,17 @@ class TodoService:
             ValidationError: If the input data fails validation
             TodoDomainError: If the save operation fails
         """
-        try:
-            # Create domain object with validation
-            todo = TodoItem(
-                title=title,
-                description=description,
-                due_date=due_date,
-            )
+        # Create domain object with validation using factory
+        todo = TodoItemFactory.create_todo_item(
+            title=title,
+            description=description,
+            due_date=due_date,
+        )
 
-            # Persist through repository
-            self.repository.save(todo)
+        # Persist through repository
+        self.repository.save(todo)
 
-            return todo
-
-        except PydanticValidationError as e:
-            # Convert Pydantic validation errors to domain validation errors
-            error_messages = []
-            for error in e.errors():
-                if error["type"] == "value_error" and "ctx" in error:
-                    # Handle custom validator errors
-                    error_messages.append(str(error["ctx"]["error"]))
-                elif error["type"] == "string_too_short" and error["loc"][0] == "title":
-                    # Handle empty title specifically
-                    error_messages.append("Title cannot be empty")
-                elif error["type"] == "value_error" and "Due date cannot be in the past" in str(error):
-                    error_messages.append("Due date cannot be in the past")
-                else:
-                    # Handle other validation errors
-                    field_name = error["loc"][0] if error["loc"] else "field"
-                    error_messages.append(f"{field_name}: {error['msg']}")
-
-            raise ValidationError("; ".join(error_messages)) from e
+        return todo
 
     def get_all_todos(self) -> list[TodoItem]:
         """
@@ -149,36 +128,13 @@ class TodoService:
             "completed": existing_todo.completed,
         }
 
-        try:
-            # Create updated todo with validation
-            updated_todo = TodoItem(**update_data)
-            updated_todo.id = existing_todo.id
-            updated_todo.created_at = existing_todo.created_at
-            # updated_at will be set automatically by the model
+        # Create updated todo with validation using factory
+        updated_todo = TodoItemFactory.update_todo_item(existing_todo, update_data)
 
-            # Persist changes
-            self.repository.update(updated_todo)
+        # Persist changes
+        self.repository.update(updated_todo)
 
-            return updated_todo
-
-        except PydanticValidationError as e:
-            # Convert Pydantic validation errors to domain validation errors
-            error_messages = []
-            for error in e.errors():
-                if error["type"] == "value_error" and "ctx" in error:
-                    # Handle custom validator errors
-                    error_messages.append(str(error["ctx"]["error"]))
-                elif error["type"] == "string_too_short" and error["loc"][0] == "title":
-                    # Handle empty title specifically
-                    error_messages.append("Title cannot be empty")
-                elif error["type"] == "value_error" and "Due date cannot be in the past" in str(error):
-                    error_messages.append("Due date cannot be in the past")
-                else:
-                    # Handle other validation errors
-                    field_name = error["loc"][0] if error["loc"] else "field"
-                    error_messages.append(f"{field_name}: {error['msg']}")
-
-            raise ValidationError("; ".join(error_messages)) from e
+        return updated_todo
 
     def complete_todo(self, todo_id: UUID) -> TodoItem:
         """
