@@ -9,13 +9,13 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from src.application.services.todo_factory import PydanticErrorConverter, TodoItemFactory
+from src.application.services.todo_factory import TodoItemFactory, _convert_pydantic_error
 from src.domain.exceptions import ValidationError
 from src.domain.models import TodoItem
 
 
 class TestPydanticErrorConverter:
-    """Test suite for PydanticErrorConverter."""
+    """Test suite for _convert_pydantic_error function."""
 
     def test_should_convert_string_too_short_error_for_title(self):
         """Test conversion of string_too_short error for title field."""
@@ -23,7 +23,7 @@ class TestPydanticErrorConverter:
         try:
             TodoItem(title="")
         except Exception as e:
-            result = PydanticErrorConverter.convert_validation_error(e)
+            result = _convert_pydantic_error(e)
 
         # Assert
         assert isinstance(result, ValidationError)
@@ -35,7 +35,7 @@ class TestPydanticErrorConverter:
         try:
             TodoItem(title="   ")  # Whitespace only
         except Exception as e:
-            result = PydanticErrorConverter.convert_validation_error(e)
+            result = _convert_pydantic_error(e)
 
         # Assert
         assert isinstance(result, ValidationError)
@@ -48,7 +48,7 @@ class TestPydanticErrorConverter:
         try:
             TodoItem(title="Test", due_date=past_date)
         except Exception as e:
-            result = PydanticErrorConverter.convert_validation_error(e)
+            result = _convert_pydantic_error(e)
 
         # Assert
         assert isinstance(result, ValidationError)
@@ -60,7 +60,7 @@ class TestPydanticErrorConverter:
         try:
             TodoItem()  # Missing required title
         except Exception as e:
-            result = PydanticErrorConverter.convert_validation_error(e)
+            result = _convert_pydantic_error(e)
 
         # Assert
         assert isinstance(result, ValidationError)
@@ -73,7 +73,7 @@ class TestPydanticErrorConverter:
         try:
             TodoItem(title="", due_date=past_date)
         except Exception as e:
-            result = PydanticErrorConverter.convert_validation_error(e)
+            result = _convert_pydantic_error(e)
 
         # Assert
         assert isinstance(result, ValidationError)
@@ -88,7 +88,7 @@ class TestPydanticErrorConverter:
         try:
             TodoItem(title="x" * 201)  # Exceeds max_length
         except Exception as e:
-            result = PydanticErrorConverter.convert_validation_error(e)
+            result = _convert_pydantic_error(e)
 
         # Assert
         assert isinstance(result, ValidationError)
