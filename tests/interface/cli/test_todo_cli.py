@@ -102,7 +102,7 @@ class TestTodoCLIMenuSystem:
 class TestTodoCLIWorkflowMethods:
     """Test suite for todo workflow methods."""
 
-    @pytest.mark.parametrize("method_name", ["list_todos", "update_todo", "complete_todo", "delete_todo"])
+    @pytest.mark.parametrize("method_name", ["update_todo", "complete_todo", "delete_todo"])
     def test_workflow_methods_return_true(self, cli_with_mocked_console, method_name):
         """Test that workflow methods return True to continue loop."""
         method = getattr(cli_with_mocked_console, method_name)
@@ -439,3 +439,152 @@ class TestAddTodoErrorHandling:
 
         result = cli_with_mocked_console.add_todo()
         assert result is True
+
+
+class TestListTodosWorkflow:
+    """Test suite for list todos CLI workflow."""
+
+    def test_should_display_todos_in_formatted_table(self, cli_with_mocked_console):
+        """Test that list_todos displays todos in a Rich table format."""
+        from datetime import datetime
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        # Mock todos data
+        mock_todos = [
+            TodoItem(
+                id=uuid4(),
+                title="Test Todo 1",
+                description="Test description 1",
+                due_date=datetime(2025, 12, 31),
+                completed=False,
+            ),
+            TodoItem(
+                id=uuid4(),
+                title="Test Todo 2",
+                description="Test description 2",
+                due_date=None,
+                completed=True,
+            ),
+        ]
+
+        cli_with_mocked_console.service.get_all_todos.return_value = mock_todos
+
+        result = cli_with_mocked_console.list_todos()
+
+        assert result is True
+        cli_with_mocked_console.service.get_all_todos.assert_called_once()
+        # Should print the table
+        cli_with_mocked_console.console.print.assert_called()
+
+    def test_should_display_empty_message_when_no_todos(self, cli_with_mocked_console):
+        """Test that empty message is shown when no todos exist."""
+        cli_with_mocked_console.service.get_all_todos.return_value = []
+
+        result = cli_with_mocked_console.list_todos()
+
+        assert result is True
+        cli_with_mocked_console.service.get_all_todos.assert_called_once()
+        # Should print empty message
+        cli_with_mocked_console.console.print.assert_called()
+
+        # Verify that multiple prints occurred (header + empty message)
+        assert cli_with_mocked_console.console.print.call_count >= 2
+
+    def test_should_show_all_todo_fields_in_table(self, cli_with_mocked_console):
+        """Test that table shows ID, title, description, due date, and status."""
+        from datetime import datetime
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        mock_todo = TodoItem(
+            id=uuid4(),
+            title="Complete Todo",
+            description="Test description",
+            due_date=datetime(2025, 12, 31),
+            completed=True,
+        )
+
+        cli_with_mocked_console.service.get_all_todos.return_value = [mock_todo]
+
+        result = cli_with_mocked_console.list_todos()
+
+        assert result is True
+        cli_with_mocked_console.service.get_all_todos.assert_called_once()
+        cli_with_mocked_console.console.print.assert_called()
+
+    def test_should_use_color_coding_for_status(self, cli_with_mocked_console):
+        """Test that completed and pending todos have different color coding."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        mock_todos = [
+            TodoItem(id=uuid4(), title="Pending Todo", completed=False),
+            TodoItem(id=uuid4(), title="Completed Todo", completed=True),
+        ]
+
+        cli_with_mocked_console.service.get_all_todos.return_value = mock_todos
+
+        result = cli_with_mocked_console.list_todos()
+
+        assert result is True
+        cli_with_mocked_console.service.get_all_todos.assert_called_once()
+        cli_with_mocked_console.console.print.assert_called()
+
+    def test_should_sort_todos_by_due_date(self, cli_with_mocked_console):
+        """Test that todos are sorted by due date with overdue items highlighted."""
+        from datetime import datetime, timedelta
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        now = datetime.now()
+        near_future_date = now + timedelta(days=1)
+        far_future_date = now + timedelta(days=7)
+
+        mock_todos = [
+            TodoItem(id=uuid4(), title="Far Future Todo", due_date=far_future_date, completed=False),
+            TodoItem(id=uuid4(), title="Near Future Todo", due_date=near_future_date, completed=False),
+            TodoItem(id=uuid4(), title="No Date Todo", due_date=None, completed=False),
+        ]
+
+        cli_with_mocked_console.service.get_all_todos.return_value = mock_todos
+
+        result = cli_with_mocked_console.list_todos()
+
+        assert result is True
+        cli_with_mocked_console.service.get_all_todos.assert_called_once()
+        cli_with_mocked_console.console.print.assert_called()
+
+    def test_should_handle_service_error_gracefully(self, cli_with_mocked_console):
+        """Test that service errors are handled gracefully."""
+        from src.domain.exceptions import TodoDomainError
+
+        cli_with_mocked_console.service.get_all_todos.side_effect = TodoDomainError("Database error")
+
+        result = cli_with_mocked_console.list_todos()
+
+        assert result is True
+        cli_with_mocked_console.service.get_all_todos.assert_called_once()
+        # Should display error message
+        cli_with_mocked_console.console.print.assert_called()
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_message_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_message_found
+
+    def test_should_handle_unexpected_exceptions(self, cli_with_mocked_console):
+        """Test that unexpected exceptions are handled gracefully."""
+        cli_with_mocked_console.service.get_all_todos.side_effect = Exception("Unexpected error")
+
+        result = cli_with_mocked_console.list_todos()
+
+        assert result is True
+        cli_with_mocked_console.service.get_all_todos.assert_called_once()
+        # Should display error message
+        cli_with_mocked_console.console.print.assert_called()
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_message_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_message_found

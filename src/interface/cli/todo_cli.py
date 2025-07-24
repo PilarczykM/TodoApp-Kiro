@@ -132,9 +132,42 @@ class TodoCLI:
                 return True
 
     def list_todos(self) -> bool:
-        """Handle list todos workflow - placeholder for now."""
-        self.console.print(f"[{ConsoleColors.INFO}]List Todos functionality coming soon![/{ConsoleColors.INFO}]")
-        return True
+        """
+        Handle list todos workflow with Rich table display.
+
+        Retrieves all todos from the service and displays them in a formatted
+        table with color coding for status and proper sorting by due date.
+        Handles empty list and error cases gracefully.
+
+        Returns:
+            True to continue the main menu loop
+        """
+        self.console.print()
+        self.console.print(Panel("[bold cyan]Todo List[/bold cyan]", border_style="cyan"))
+
+        try:
+            # Get all todos from service
+            todos = self.service.get_all_todos()
+
+            # Handle empty list case
+            if not todos:
+                self._display_empty_todos_message()
+                return True
+
+            # Sort todos by due date (overdue first, then by date, then no date)
+            sorted_todos = self._sort_todos_by_due_date(todos)
+
+            # Display todos in formatted table
+            self._display_todos_table(sorted_todos)
+            return True
+
+        except TodoDomainError as e:
+            self._display_domain_error(e)
+            return True
+
+        except Exception as e:
+            self._display_unexpected_error(e)
+            return True
 
     def update_todo(self) -> bool:
         """Handle update todo workflow - placeholder for now."""
@@ -155,6 +188,47 @@ class TodoCLI:
         """Handle application exit."""
         self._show_goodbye_message()
         return False
+
+    def _display_empty_todos_message(self) -> None:
+        """Display message when no todos exist."""
+        empty_message = f"[{ConsoleColors.INFO}]No todos found. Start by adding your first todo![/{ConsoleColors.INFO}]"
+        self.console.print(Panel(empty_message, title="Empty List", border_style="yellow"))
+
+    def _sort_todos_by_due_date(self, todos: list["TodoItem"]) -> list["TodoItem"]:
+        """
+        Sort todos by due date with specific ordering.
+
+        Order: Overdue items first, then future items by due date, then items without due date.
+
+        Args:
+            todos: List of TodoItem instances to sort
+
+        Returns:
+            Sorted list of TodoItem instances
+        """
+        from datetime import datetime
+
+        def sort_key(todo: "TodoItem") -> tuple:
+            # Items without due date go to the end
+            if todo.due_date is None:
+                return (2, datetime.max)
+
+            now = datetime.now()
+            # Overdue items (past due date) go first
+            if todo.due_date < now:
+                return (0, todo.due_date)
+
+            # Future items go in the middle, sorted by due date
+            return (1, todo.due_date)
+
+        return sorted(todos, key=sort_key)
+
+    def _display_todos_table(self, todos: list["TodoItem"]) -> None:
+        """Display todos in a formatted Rich table."""
+        from src.interface.cli.console_helpers import format_todo_table
+
+        table = format_todo_table(todos)
+        self.console.print(table)
 
     def _get_menu_choice(self) -> str:
         """
