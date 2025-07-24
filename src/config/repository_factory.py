@@ -1,6 +1,6 @@
 """Repository factory with strategy pattern for creating storage backends."""
 
-from typing import Protocol
+from typing import Literal, Protocol
 
 from src.infrastructure.persistence.json_repository import JSONTodoRepository
 from src.infrastructure.persistence.repository import TodoRepository
@@ -10,7 +10,7 @@ from src.infrastructure.persistence.xml_repository import XMLTodoRepository
 class SettingsProtocol(Protocol):
     """Protocol for settings objects that can be used with the repository factory."""
 
-    storage_type: str
+    storage_type: Literal["json", "xml"]
     storage_file: str
 
 
