@@ -1,5 +1,4 @@
 {
     "storage_type": "json",
-    "data_file_path": "todos",
-    "log_level": "INFO"
+    "storage_file": "todos.json"
 }
