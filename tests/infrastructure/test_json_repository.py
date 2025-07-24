@@ -331,7 +331,7 @@ class TestJSONTodoRepository:
         # Create a path that will cause permission errors
         invalid_path = Path("/root/invalid/path/test.json")
 
-        with pytest.raises(TodoDomainError, match="Failed to initialize JSON file"):
+        with pytest.raises(TodoDomainError, match="Failed to initialize file"):
             JSONTodoRepository(str(invalid_path))
 
     def test_should_handle_load_read_errors(self):

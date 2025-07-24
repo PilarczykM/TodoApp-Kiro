@@ -15,6 +15,7 @@ from uuid import UUID
 
 from src.domain.exceptions import TodoDomainError, TodoNotFoundError
 from src.domain.models import TodoItem
+from src.infrastructure.persistence.file_utils import ensure_file_exists
 from src.infrastructure.persistence.repository import TodoRepository
 
 
@@ -38,28 +39,20 @@ class JSONTodoRepository(TodoRepository):
             TodoDomainError: If the file path is invalid or inaccessible
         """
         self.file_path = Path(file_path)
-        self._ensure_file_exists()
+        ensure_file_exists(self.file_path, self._initialize_empty_json)
 
-    def _ensure_file_exists(self) -> None:
+    def _initialize_empty_json(self) -> None:
         """
-        Ensure the JSON file exists and is properly initialized.
-
-        Creates an empty JSON array if the file doesn't exist.
+        Initialize an empty JSON file with an empty array.
 
         Raises:
-            TodoDomainError: If file creation fails
+            TodoDomainError: If JSON file creation fails
         """
         try:
-            if not self.file_path.exists():
-                self.file_path.parent.mkdir(parents=True, exist_ok=True)
-                with open(self.file_path, "w") as f:
-                    json.dump([], f)
-            elif self.file_path.stat().st_size == 0:
-                # Handle empty file
-                with open(self.file_path, "w") as f:
-                    json.dump([], f)
+            with open(self.file_path, "w") as f:
+                json.dump([], f)
         except OSError as e:
-            raise TodoDomainError(f"Failed to initialize JSON file: {e}") from e
+            raise TodoDomainError(f"Failed to create JSON file: {e}") from e
 
     def _load_todos(self) -> list[dict[str, Any]]:
         """

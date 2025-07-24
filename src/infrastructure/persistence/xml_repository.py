@@ -15,6 +15,7 @@ from lxml import etree
 
 from src.domain.exceptions import TodoDomainError, TodoNotFoundError
 from src.domain.models import TodoItem
+from src.infrastructure.persistence.file_utils import ensure_file_exists
 from src.infrastructure.persistence.repository import TodoRepository
 
 
@@ -39,33 +40,14 @@ class XMLTodoRepository(TodoRepository):
             TodoDomainError: If the file path is invalid or inaccessible
         """
         self.file_path = Path(file_path)
-        self._ensure_file_exists()
+        ensure_file_exists(self.file_path, self._initialize_empty_xml)
 
-    def _ensure_file_exists(self) -> None:
+    def _initialize_empty_xml(self) -> None:
         """
-        Ensure the XML file exists and is properly initialized.
-
-        Creates an empty XML document with root element if the file doesn't exist.
+        Initialize an empty XML file with root element.
 
         Raises:
-            TodoDomainError: If file creation fails
-        """
-        try:
-            if not self.file_path.exists():
-                self.file_path.parent.mkdir(parents=True, exist_ok=True)
-                self._create_empty_xml()
-            elif self.file_path.stat().st_size == 0:
-                # Handle empty file
-                self._create_empty_xml()
-        except OSError as e:
-            raise TodoDomainError(f"Failed to initialize XML file: {e}") from e
-
-    def _create_empty_xml(self) -> None:
-        """
-        Create an empty XML file with root element.
-
-        Raises:
-            TodoDomainError: If XML creation fails
+            TodoDomainError: If XML file creation fails
         """
         try:
             root = etree.Element("todos")

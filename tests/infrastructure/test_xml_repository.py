@@ -341,7 +341,7 @@ class TestXMLTodoRepository:
         # Create a path that will cause permission errors
         invalid_path = Path("/root/invalid/path/test.xml")
 
-        with pytest.raises(TodoDomainError, match="Failed to initialize XML file"):
+        with pytest.raises(TodoDomainError, match="Failed to initialize file"):
             XMLTodoRepository(str(invalid_path))
 
     def test_should_handle_missing_required_xml_elements(self):
@@ -508,7 +508,7 @@ class TestXMLTodoRepository:
         # Create a path that will cause permission errors
         invalid_path = Path("/root/invalid/path/test.xml")
 
-        with pytest.raises(TodoDomainError, match="Failed to initialize XML file"):
+        with pytest.raises(TodoDomainError, match="Failed to initialize file"):
             XMLTodoRepository(str(invalid_path))
 
     def test_should_handle_extract_required_text_edge_cases(self):
