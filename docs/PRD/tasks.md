@@ -140,39 +140,39 @@
     - _Requirements: 9.2, 9.4_
 
   - [x] 7.2 Implement main menu and navigation
-    - [ ] Write failing tests for menu display and user input handling (commit: "Add failing tests for main menu")
-    - [ ] Implement TodoCLI class with menu system and input validation (commit: "Implement TodoCLI main menu system")
-    - [ ] Test menu navigation and user choice processing (commit: "Add menu navigation tests")
+    - [x] Write failing tests for menu display and user input handling (commit: "Add failing tests for main menu")
+    - [x] Implement TodoCLI class with menu system and input validation (commit: "Implement TodoCLI main menu system")
+    - [x] Test menu navigation and user choice processing (commit: "Add menu navigation tests")
     - _Requirements: 9.1, 9.3, 9.5_
 
-  - [ ] 7.3 Implement add todo CLI workflow
-    - [ ] Write failing tests for add todo user interaction and input validation (commit: "Add failing tests for add todo CLI")
-    - [ ] Implement add todo CLI method with Rich prompts and error handling (commit: "Implement add todo CLI workflow")
-    - [ ] Test user input validation and success/error message display (commit: "Add add todo CLI validation tests")
+  - [x] 7.3 Implement add todo CLI workflow
+    - [x] Write failing tests for add todo user interaction and input validation (commit: "Add failing tests for add todo CLI")
+    - [x] Implement add todo CLI method with Rich prompts and error handling (commit: "Implement add todo CLI workflow")
+    - [x] Test user input validation and success/error message display (commit: "Add add todo CLI validation tests")
     - _Requirements: 1.1, 1.3, 1.5, 9.3, 9.4_
 
-  - [ ] 7.4 Implement list todos CLI display
-    - [ ] Write failing tests for todo list display with Rich tables (commit: "Add failing tests for list todos CLI")
-    - [ ] Implement list todos CLI method with formatted table output (commit: "Implement list todos CLI display")
-    - [ ] Test empty list handling and color-coded status display (commit: "Add list todos display tests")
+  - [x] 7.4 Implement list todos CLI display
+    - [x] Write failing tests for todo list display with Rich tables (commit: "Add failing tests for list todos CLI")
+    - [x] Implement list todos CLI method with formatted table output (commit: "Implement list todos CLI display")
+    - [x] Test empty list handling and color-coded status display (commit: "Add list todos display tests")
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-  - [ ] 7.5 Implement update todo CLI workflow
-    - [ ] Write failing tests for update todo user interaction (commit: "Add failing tests for update todo CLI")
-    - [ ] Implement update todo CLI method with current value display and editing (commit: "Implement update todo CLI workflow")
-    - [ ] Test ID validation and field update workflows (commit: "Add update todo CLI validation tests")
+  - [x] 7.5 Implement update todo CLI workflow
+    - [x] Write failing tests for update todo user interaction (commit: "Add failing tests for update todo CLI")
+    - [x] Implement update todo CLI method with current value display and editing (commit: "Implement update todo CLI workflow")
+    - [x] Test ID validation and field update workflows (commit: "Add update todo CLI validation tests")
     - _Requirements: 3.1, 3.2, 3.3, 3.5_
 
-  - [ ] 7.6 Implement complete todo CLI workflow
-    - [ ] Write failing tests for complete todo user interaction (commit: "Add failing tests for complete todo CLI")
-    - [ ] Implement complete todo CLI method with ID prompting and confirmation (commit: "Implement complete todo CLI workflow")
-    - [ ] Test completion workflow and status display (commit: "Add complete todo CLI tests")
+  - [x] 7.6 Implement complete todo CLI workflow
+    - [x] Write failing tests for complete todo user interaction (commit: "Add failing tests for complete todo CLI")
+    - [x] Implement complete todo CLI method with ID prompting and confirmation (commit: "Implement complete todo CLI workflow")
+    - [x] Test completion workflow and status display (commit: "Add complete todo CLI tests")
     - _Requirements: 4.1, 4.2, 4.3, 4.5_
 
-  - [ ] 7.7 Implement delete todo CLI workflow
-    - [ ] Write failing tests for delete todo user interaction with confirmation (commit: "Add failing tests for delete todo CLI")
-    - [ ] Implement delete todo CLI method with confirmation prompts (commit: "Implement delete todo CLI workflow")
-    - [ ] Test deletion workflow and confirmation handling (commit: "Add delete todo CLI confirmation tests")
+  - [x] 7.7 Implement delete todo CLI workflow
+    - [x] Write failing tests for delete todo user interaction with confirmation (commit: "Add failing tests for delete todo CLI")
+    - [x] Implement delete todo CLI method with confirmation prompts (commit: "Implement delete todo CLI workflow")
+    - [x] Test deletion workflow and confirmation handling (commit: "Add delete todo CLI confirmation tests")
     - _Requirements: 5.1, 5.2, 5.3, 5.5_
   - **⚠️ WAIT FOR CONFIRMATION BEFORE PROCEEDING TO TASK 8**
 

@@ -82,3 +82,13 @@ The CLI uses Rich library for enhanced console output:
 - Currently has placeholder methods being implemented
 
 Entry point: `uv run todo` (via pyproject.toml script)
+
+## Git Commit Guidelines
+
+When creating git commits, follow these specific guidelines:
+
+- **DO NOT** add co-author information or mention who created the changes
+- **DO NOT** include lines like "Generated with [Claude Code]" or "Co-Authored-By: Claude"
+- Keep commit messages focused on the technical changes and their purpose
+- Use conventional commit format: `type(scope): description`
+- Include detailed explanations of features, requirements satisfied, and testing done
