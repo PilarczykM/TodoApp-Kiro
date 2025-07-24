@@ -102,9 +102,9 @@ class TestTodoCLIMenuSystem:
 class TestTodoCLIWorkflowMethods:
     """Test suite for todo workflow methods."""
 
-    @pytest.mark.parametrize("method_name", ["add_todo", "list_todos", "update_todo", "complete_todo", "delete_todo"])
+    @pytest.mark.parametrize("method_name", ["list_todos", "update_todo", "complete_todo", "delete_todo"])
     def test_workflow_methods_return_true(self, cli_with_mocked_console, method_name):
-        """Test that all workflow methods return True to continue loop."""
+        """Test that workflow methods return True to continue loop."""
         method = getattr(cli_with_mocked_console, method_name)
         result = method()
 
@@ -186,3 +186,256 @@ class TestTodoCLIPrivateMethods:
 
         assert result is False
         cli_with_mocked_console.console.print.assert_called_once()
+
+
+class TestAddTodoWorkflow:
+    """Test suite for add todo CLI workflow."""
+
+    def test_should_prompt_for_title_description_and_due_date(self, cli_with_mocked_console, mock_prompt):
+        """Test that add_todo prompts for all required fields."""
+        # Mock user inputs
+        mock_prompt.side_effect = [
+            "Test Todo",  # title
+            "Test Description",  # description
+            "2025-12-31",  # due_date
+        ]
+
+        # Mock service to avoid actual creation
+        mock_todo = Mock()
+        mock_todo.title = "Test Todo"
+        mock_todo.id = "12345678"
+        cli_with_mocked_console.service.create_todo.return_value = mock_todo
+
+        result = cli_with_mocked_console.add_todo()
+
+        assert result is True
+        # Should prompt for title, description, and due date
+        assert mock_prompt.call_count >= 3
+        cli_with_mocked_console.service.create_todo.assert_called_once()
+
+    def test_should_create_todo_with_valid_input(self, cli_with_mocked_console, mock_prompt):
+        """Test that valid input creates a todo successfully."""
+        # Mock user inputs
+        mock_prompt.side_effect = [
+            "Valid Todo Title",  # title
+            "Valid description",  # description
+            "2025-12-31",  # due_date
+        ]
+
+        # Mock created todo
+        mock_todo = Mock()
+        mock_todo.title = "Valid Todo Title"
+        mock_todo.description = "Valid description"
+        mock_todo.id = "12345678"
+        cli_with_mocked_console.service.create_todo.return_value = mock_todo
+
+        result = cli_with_mocked_console.add_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.create_todo.assert_called_once()
+        # Should display success message
+        cli_with_mocked_console.console.print.assert_called()
+
+    def test_should_handle_minimal_todo_creation(self, cli_with_mocked_console, mock_prompt):
+        """Test creating todo with only title (minimal required data)."""
+        # Mock user inputs - only title, empty description and due date
+        mock_prompt.side_effect = [
+            "Minimal Todo",  # title
+            "",  # empty description
+            "",  # empty due_date
+        ]
+
+        # Mock created todo
+        mock_todo = Mock()
+        mock_todo.title = "Minimal Todo"
+        mock_todo.description = None
+        mock_todo.due_date = None
+        mock_todo.id = "12345678"
+        cli_with_mocked_console.service.create_todo.return_value = mock_todo
+
+        result = cli_with_mocked_console.add_todo()
+
+        assert result is True
+        # Should call create_todo with None for optional fields
+        cli_with_mocked_console.service.create_todo.assert_called_once()
+        call_args = cli_with_mocked_console.service.create_todo.call_args
+        assert call_args[1]["description"] is None
+        assert call_args[1]["due_date"] is None
+
+    def test_should_display_success_message_with_todo_details(self, cli_with_mocked_console, mock_prompt):
+        """Test that success message displays created todo details."""
+        # Mock user inputs
+        mock_prompt.side_effect = ["Test Todo", "Test Description", ""]
+
+        # Mock created todo
+        mock_todo = Mock()
+        mock_todo.title = "Test Todo"
+        mock_todo.description = "Test Description"
+        mock_todo.id = "12345678"
+        cli_with_mocked_console.service.create_todo.return_value = mock_todo
+
+        cli_with_mocked_console.add_todo()
+
+        # Should print success message containing todo details
+        cli_with_mocked_console.console.print.assert_called()
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        success_call_found = any("created successfully" in str(call).lower() for call in print_calls)
+        assert success_call_found
+
+
+class TestAddTodoInputValidation:
+    """Test suite for add todo input validation scenarios."""
+
+    def test_should_handle_validation_error_from_service(self, cli_with_mocked_console, mock_prompt):
+        """Test that ValidationError from service is handled gracefully."""
+        from src.domain.exceptions import ValidationError
+
+        # Mock user inputs - first attempt fails, second attempt succeeds
+        mock_prompt.side_effect = [
+            "",  # empty title (invalid)
+            "",  # empty description
+            "",  # empty due date
+            "Valid Title",  # retry with valid title
+            "Valid Description",
+            "",  # empty due date
+        ]
+
+        # Mock service to raise ValidationError first, then succeed
+        mock_todo = Mock()
+        mock_todo.title = "Valid Title"
+        mock_todo.id = "12345678"
+        cli_with_mocked_console.service.create_todo.side_effect = [ValidationError("Title cannot be empty"), mock_todo]
+
+        result = cli_with_mocked_console.add_todo()
+
+        assert result is True
+        # Should call create_todo twice (first fails, second succeeds)
+        assert cli_with_mocked_console.service.create_todo.call_count == 2
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_call_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_call_found
+
+    def test_should_handle_invalid_due_date_format(self, cli_with_mocked_console, mock_prompt):
+        """Test that invalid due date format is handled."""
+        # Mock user inputs with invalid date format
+        mock_prompt.side_effect = [
+            "Valid Title",
+            "Valid Description",
+            "invalid-date",  # invalid date format
+            "2025-12-31",  # valid date format
+        ]
+
+        mock_todo = Mock()
+        mock_todo.title = "Valid Title"
+        mock_todo.id = "12345678"
+        cli_with_mocked_console.service.create_todo.return_value = mock_todo
+
+        result = cli_with_mocked_console.add_todo()
+
+        assert result is True
+        # Should eventually succeed
+        cli_with_mocked_console.service.create_todo.assert_called_once()
+
+    def test_should_handle_service_domain_error(self, cli_with_mocked_console, mock_prompt):
+        """Test that TodoDomainError from service is handled gracefully."""
+        from src.domain.exceptions import TodoDomainError
+
+        # Mock user inputs
+        mock_prompt.side_effect = ["Valid Title", "Valid Description", ""]
+
+        # Mock service to raise TodoDomainError
+        cli_with_mocked_console.service.create_todo.side_effect = TodoDomainError("Database error")
+
+        result = cli_with_mocked_console.add_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.create_todo.assert_called_once()
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_call_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_call_found
+
+    def test_should_allow_retry_after_validation_error(self, cli_with_mocked_console, mock_prompt):
+        """Test that user can retry after validation error."""
+        from src.domain.exceptions import ValidationError
+
+        # Mock user inputs - first attempt fails, second succeeds
+        mock_prompt.side_effect = [
+            "a" * 201,  # title too long (invalid)
+            "",  # empty description
+            "",  # empty due date
+            "Valid Title",  # retry with valid title
+            "Valid Description",
+            "",  # empty due date
+        ]
+
+        # Mock service behavior
+        mock_todo = Mock()
+        mock_todo.title = "Valid Title"
+        mock_todo.id = "12345678"
+        cli_with_mocked_console.service.create_todo.side_effect = [ValidationError("Title too long"), mock_todo]
+
+        result = cli_with_mocked_console.add_todo()
+
+        assert result is True
+        # Should call create_todo twice
+        assert cli_with_mocked_console.service.create_todo.call_count == 2
+
+
+class TestAddTodoErrorHandling:
+    """Test suite for add todo error handling scenarios."""
+
+    def test_should_handle_unexpected_exceptions(self, cli_with_mocked_console, mock_prompt):
+        """Test that unexpected exceptions are handled gracefully."""
+        # Mock user inputs
+        mock_prompt.side_effect = ["Valid Title", "Valid Description", ""]
+
+        # Mock service to raise unexpected exception
+        cli_with_mocked_console.service.create_todo.side_effect = Exception("Unexpected error")
+
+        result = cli_with_mocked_console.add_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.create_todo.assert_called_once()
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_call_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_call_found
+
+    def test_should_display_helpful_error_messages(self, cli_with_mocked_console, mock_prompt):
+        """Test that error messages are helpful and user-friendly."""
+        from src.domain.exceptions import ValidationError
+
+        # Mock user inputs
+        mock_prompt.side_effect = ["Invalid Title", "Valid Description", ""]
+
+        # Mock service to raise ValidationError with specific message
+        error_message = "Title must be between 1 and 200 characters"
+        cli_with_mocked_console.service.create_todo.side_effect = ValidationError(error_message)
+
+        cli_with_mocked_console.add_todo()
+
+        # Should display the specific error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_message_found = any(error_message in str(call) for call in print_calls)
+        assert error_message_found
+
+    def test_should_return_true_to_continue_menu_loop(self, cli_with_mocked_console, mock_prompt):
+        """Test that add_todo always returns True to continue menu loop."""
+        from src.domain.exceptions import ValidationError
+
+        # Test successful case
+        mock_prompt.side_effect = ["Valid Title", "Valid Description", ""]
+        mock_todo = Mock()
+        cli_with_mocked_console.service.create_todo.return_value = mock_todo
+
+        result = cli_with_mocked_console.add_todo()
+        assert result is True
+
+        # Test error case
+        mock_prompt.side_effect = ["Invalid Title", "Valid Description", ""]
+        cli_with_mocked_console.service.create_todo.side_effect = ValidationError("Error")
+
+        result = cli_with_mocked_console.add_todo()
+        assert result is True

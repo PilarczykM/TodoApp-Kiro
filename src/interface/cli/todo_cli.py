@@ -5,12 +5,19 @@ This module provides the main CLI interface for the Todo application,
 including menu system, user input handling, and navigation.
 """
 
+from datetime import datetime
+from typing import TYPE_CHECKING
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
 
 from src.application.services.todo_service import TodoService
+from src.domain.exceptions import TodoDomainError, ValidationError
 from src.interface.cli.console_helpers import ConsoleColors
+
+if TYPE_CHECKING:
+    from src.domain.models import TodoItem
 
 
 class TodoCLI:
@@ -82,9 +89,47 @@ class TodoCLI:
         self.console.print(menu_panel)
 
     def add_todo(self) -> bool:
-        """Handle add todo workflow - placeholder for now."""
-        self.console.print(f"[{ConsoleColors.INFO}]Add Todo functionality coming soon![/{ConsoleColors.INFO}]")
-        return True
+        """
+        Handle add todo workflow with Rich prompts and error handling.
+
+        Prompts user for title, description, and due date, then creates
+        a new todo item through the service layer. Handles validation
+        errors gracefully and allows retry.
+
+        Returns:
+            True to continue the main menu loop
+        """
+        self.console.print()
+        self.console.print(Panel("[bold cyan]Add New Todo[/bold cyan]", border_style="cyan"))
+
+        while True:
+            try:
+                # Collect user input
+                title = self._prompt_for_title()
+                description = self._prompt_for_description()
+                due_date = self._prompt_for_due_date()
+
+                # Create the todo through service
+                created_todo = self.service.create_todo(
+                    title=title, description=description if description else None, due_date=due_date
+                )
+
+                # Display success message
+                self._display_todo_created_success(created_todo)
+                return True
+
+            except ValidationError as e:
+                self._display_validation_error(e)
+                # Continue loop to retry
+                continue
+
+            except TodoDomainError as e:
+                self._display_domain_error(e)
+                return True
+
+            except Exception as e:
+                self._display_unexpected_error(e)
+                return True
 
     def list_todos(self) -> bool:
         """Handle list todos workflow - placeholder for now."""
@@ -142,6 +187,65 @@ class TodoCLI:
         """Display invalid choice error message."""
         self.console.print(
             f"[{ConsoleColors.ERROR}]Invalid choice! Please select a valid option.[/{ConsoleColors.ERROR}]"
+        )
+
+    def _prompt_for_title(self) -> str:
+        """Prompt user for todo title."""
+        return Prompt.ask("[bold]Enter todo title[/bold]", default="")
+
+    def _prompt_for_description(self) -> str:
+        """Prompt user for todo description (optional)."""
+        return Prompt.ask("[bold]Enter description[/bold] [dim](optional)[/dim]", default="")
+
+    def _prompt_for_due_date(self) -> datetime | None:
+        """Prompt user for due date and parse it."""
+        date_input = Prompt.ask("[bold]Enter due date[/bold] [dim](YYYY-MM-DD format, optional)[/dim]", default="")
+
+        if not date_input.strip():
+            return None
+
+        try:
+            # Parse date in YYYY-MM-DD format
+            return datetime.strptime(date_input.strip(), "%Y-%m-%d")
+        except ValueError:
+            self.console.print(
+                f"[{ConsoleColors.WARNING}]Invalid date format. Please use YYYY-MM-DD format.[/{ConsoleColors.WARNING}]"
+            )
+            # Retry date input
+            return self._prompt_for_due_date()
+
+    def _display_todo_created_success(self, todo: "TodoItem") -> None:
+        """Display success message with created todo details."""
+        success_message = f"[{ConsoleColors.SUCCESS}]✅ Todo created successfully![/{ConsoleColors.SUCCESS}]"
+
+        details = f"""
+[bold]Title:[/bold] {todo.title}
+[bold]ID:[/bold] {str(todo.id)[:8]}...
+[bold]Description:[/bold] {todo.description or "No description"}
+[bold]Due Date:[/bold] {todo.due_date.strftime("%Y-%m-%d") if todo.due_date else "No due date"}
+        """
+
+        self.console.print(success_message)
+        self.console.print(Panel(details.strip(), title="Todo Details", border_style="green"))
+
+    def _display_validation_error(self, error: ValidationError) -> None:
+        """Display validation error message with retry option."""
+        error_message = f"[{ConsoleColors.ERROR}]❌ Validation Error:[/{ConsoleColors.ERROR}] {error!s}"
+        self.console.print(error_message)
+        self.console.print(f"[{ConsoleColors.INFO}]Please try again with valid input.[/{ConsoleColors.INFO}]")
+        self.console.print()
+
+    def _display_domain_error(self, error: TodoDomainError) -> None:
+        """Display domain error message."""
+        error_message = f"[{ConsoleColors.ERROR}]❌ Error:[/{ConsoleColors.ERROR}] {error!s}"
+        self.console.print(error_message)
+
+    def _display_unexpected_error(self, error: Exception) -> None:
+        """Display unexpected error message."""
+        error_message = f"[{ConsoleColors.ERROR}]❌ Unexpected error:[/{ConsoleColors.ERROR}] {error!s}"
+        self.console.print(error_message)
+        self.console.print(
+            f"[{ConsoleColors.INFO}]Please try again or contact support if the problem persists.[/{ConsoleColors.INFO}]"
         )
 
     def _show_goodbye_message(self) -> None:
