@@ -151,10 +151,10 @@
     - [x] Test user input validation and success/error message display (commit: "Add add todo CLI validation tests")
     - _Requirements: 1.1, 1.3, 1.5, 9.3, 9.4_
 
-  - [ ] 7.4 Implement list todos CLI display
-    - [ ] Write failing tests for todo list display with Rich tables (commit: "Add failing tests for list todos CLI")
-    - [ ] Implement list todos CLI method with formatted table output (commit: "Implement list todos CLI display")
-    - [ ] Test empty list handling and color-coded status display (commit: "Add list todos display tests")
+  - [x] 7.4 Implement list todos CLI display
+    - [x] Write failing tests for todo list display with Rich tables (commit: "Add failing tests for list todos CLI")
+    - [x] Implement list todos CLI method with formatted table output (commit: "Implement list todos CLI display")
+    - [x] Test empty list handling and color-coded status display (commit: "Add list todos display tests")
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
   - [ ] 7.5 Implement update todo CLI workflow
