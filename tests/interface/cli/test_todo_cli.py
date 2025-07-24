@@ -1,8 +1,26 @@
 """
 Tests for TodoCLI main interface class.
 
-This module contains tests for the main CLI interface, menu system,
-and user interaction workflows following pytest best practices.
+This module contains comprehensive tests for the main CLI interface, including:
+- Menu system and navigation
+- User interaction workflows (add, list, update, complete, delete)
+- Error handling and validation
+- Input/output formatting and display
+- Parameterized tests for consistent behavior across workflows
+
+Test Organization:
+- TestTodoCLIInitialization: Basic CLI setup and structure
+- TestTodoCLIMenuSystem: Menu display and navigation
+- TestTodoCLIMainLoop: Application main loop behavior
+- TestAddTodoWorkflow: Add todo functionality and validation
+- TestListTodosWorkflow: Todo list display and formatting
+- TestUpdateTodoWorkflow: Todo update functionality
+- TestCompleteTodoWorkflow: Todo completion functionality
+- TestDeleteTodoWorkflow: Todo deletion with confirmation
+- TestCLIErrorHandlingParameterized: Systematic error handling tests
+
+All tests follow pytest best practices with proper fixtures, mocking,
+and helper functions for maintainability and readability.
 """
 
 from unittest.mock import Mock
@@ -211,20 +229,20 @@ class TestAddTodoWorkflow:
 
     def test_should_create_todo_with_valid_input(self, cli_with_mocked_console, mock_prompt):
         """Test that valid input creates a todo successfully."""
-        # Mock user inputs
-        mock_prompt.side_effect = [
-            "Valid Todo Title",  # title
-            "Valid description",  # description
-            "2025-12-31",  # due_date
-        ]
+        from tests.interface.cli.conftest import create_add_todo_inputs, create_mock_todo, setup_add_todo_test
 
-        # Mock created todo
-        mock_todo = Mock()
-        mock_todo.title = "Valid Todo Title"
-        mock_todo.description = "Valid description"
+        # Create test data
+        user_inputs = create_add_todo_inputs(
+            title="Valid Todo Title", description="Valid description", due_date="2025-12-31"
+        )
+
+        mock_todo = create_mock_todo(title="Valid Todo Title", description="Valid description")
         mock_todo.id = "12345678"
-        cli_with_mocked_console.service.create_todo.return_value = mock_todo
 
+        # Setup mocks
+        setup_add_todo_test(mock_prompt, cli_with_mocked_console, user_inputs, mock_todo)
+
+        # Execute and verify
         result = cli_with_mocked_console.add_todo()
 
         assert result is True
@@ -274,9 +292,9 @@ class TestAddTodoWorkflow:
 
         # Should print success message containing todo details
         cli_with_mocked_console.console.print.assert_called()
-        print_calls = cli_with_mocked_console.console.print.call_args_list
-        success_call_found = any("created successfully" in str(call).lower() for call in print_calls)
-        assert success_call_found
+        from tests.interface.cli.conftest import assert_console_message_contains
+
+        assert assert_console_message_contains(cli_with_mocked_console.console, "created successfully")
 
 
 class TestAddTodoInputValidation:
@@ -594,37 +612,28 @@ class TestUpdateTodoWorkflow:
         from datetime import datetime
         from uuid import uuid4
 
-        from src.domain.models import TodoItem
+        from tests.interface.cli.conftest import (
+            create_test_todo_item,
+            create_update_todo_inputs,
+            setup_update_todo_test,
+        )
 
-        # Mock existing todo
+        # Create test data
         todo_id = uuid4()
-        mock_todo = TodoItem(
-            id=todo_id,
-            title="Current Title",
-            description="Current Description",
-            due_date=datetime(2025, 12, 31),
-            completed=False,
+        current_todo = create_test_todo_item(
+            title="Current Title", description="Current Description", due_date=datetime(2025, 12, 31), todo_id=todo_id
         )
 
-        # Mock user inputs
-        mock_prompt.side_effect = [
-            str(todo_id),  # todo ID
-            "Updated Title",  # new title
-            "Updated Description",  # new description
-            "2026-01-15",  # new due date
-        ]
-
-        # Mock service responses
-        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
-        updated_todo = TodoItem(
-            id=todo_id,
-            title="Updated Title",
-            description="Updated Description",
-            due_date=datetime(2026, 1, 15),
-            completed=False,
+        updated_todo = create_test_todo_item(
+            title="Updated Title", description="Updated Description", due_date=datetime(2026, 1, 15), todo_id=todo_id
         )
-        cli_with_mocked_console.service.update_todo.return_value = updated_todo
 
+        user_inputs = create_update_todo_inputs(todo_id)
+
+        # Setup mocks
+        setup_update_todo_test(mock_prompt, cli_with_mocked_console, todo_id, current_todo, updated_todo, user_inputs)
+
+        # Execute and verify
         result = cli_with_mocked_console.update_todo()
 
         assert result is True
@@ -670,34 +679,26 @@ class TestUpdateTodoWorkflow:
         from datetime import datetime
         from uuid import uuid4
 
-        from src.domain.models import TodoItem
+        from tests.interface.cli.conftest import create_test_todo_item, setup_update_todo_test
 
         todo_id = uuid4()
-        mock_todo = TodoItem(
-            id=todo_id,
-            title="Current Title",
-            description="Current Description",
-            due_date=datetime(2025, 12, 31),
-            completed=False,
+        current_todo = create_test_todo_item(
+            title="Current Title", description="Current Description", due_date=datetime(2025, 12, 31), todo_id=todo_id
         )
 
         # Mock user inputs - only update title, keep others
-        mock_prompt.side_effect = [
+        user_inputs = [
             str(todo_id),  # todo ID
             "New Title",  # new title
             "",  # keep current description
             "",  # keep current due date
         ]
 
-        cli_with_mocked_console.service.repository.find_by_id.return_value = mock_todo
-        updated_todo = TodoItem(
-            id=todo_id,
-            title="New Title",
-            description="Current Description",
-            due_date=datetime(2025, 12, 31),
-            completed=False,
+        updated_todo = create_test_todo_item(
+            title="New Title", description="Current Description", due_date=datetime(2025, 12, 31), todo_id=todo_id
         )
-        cli_with_mocked_console.service.update_todo.return_value = updated_todo
+
+        setup_update_todo_test(mock_prompt, cli_with_mocked_console, todo_id, current_todo, updated_todo, user_inputs)
 
         result = cli_with_mocked_console.update_todo()
 
@@ -999,6 +1000,92 @@ class TestCompleteTodoWorkflow:
         cli_with_mocked_console.service.complete_todo.side_effect = TodoNotFoundError("Not found")
         result = cli_with_mocked_console.complete_todo()
         assert result is True
+
+
+class TestCLIErrorHandlingParameterized:
+    """Parameterized tests for CLI error handling across different workflows."""
+
+    @pytest.mark.parametrize(
+        "workflow_method,setup_inputs,exception_type,expected_message",
+        [
+            ("add_todo", ["Title", "Description", ""], "ValidationError", "error"),
+            ("add_todo", ["Title", "Description", ""], "TodoDomainError", "error"),
+            ("add_todo", ["Title", "Description", ""], "Exception", "error"),
+            ("update_todo", ["fake-uuid"], "ValueError", "invalid id"),
+            ("complete_todo", ["fake-uuid"], "ValueError", "invalid id"),
+            ("delete_todo", ["fake-uuid"], "ValueError", "invalid id"),
+        ],
+    )
+    def test_error_handling_across_workflows(
+        self, cli_with_mocked_console, mock_prompt, workflow_method, setup_inputs, exception_type, expected_message
+    ):
+        """Test that all workflows handle errors gracefully with consistent patterns."""
+        from src.domain.exceptions import TodoDomainError, ValidationError
+        from tests.interface.cli.conftest import assert_console_message_contains, setup_mock_prompt_sequence
+
+        # Map exception names to actual exception classes
+        exception_map = {
+            "ValidationError": ValidationError,
+            "TodoDomainError": TodoDomainError,
+            "Exception": Exception,
+            "ValueError": ValueError,
+        }
+
+        setup_mock_prompt_sequence(mock_prompt, setup_inputs)
+
+        # Mock the appropriate service method to raise the exception
+        if workflow_method == "add_todo":
+            cli_with_mocked_console.service.create_todo.side_effect = exception_map[exception_type]("Test error")
+        elif workflow_method in ["update_todo", "complete_todo", "delete_todo"]:
+            # For UUID validation errors, no service method gets called
+            pass
+
+        # Execute the workflow method
+        method = getattr(cli_with_mocked_console, workflow_method)
+        result = method()
+
+        # All error scenarios should return True to continue the main loop
+        assert result is True
+
+        # Should display appropriate error message
+        assert assert_console_message_contains(cli_with_mocked_console.console, expected_message)
+
+    @pytest.mark.parametrize(
+        "workflow_method,expected_message",
+        [
+            ("update_todo", "not found"),
+            ("complete_todo", "error"),  # complete_todo shows generic error message
+            ("delete_todo", "not found"),
+        ],
+    )
+    def test_todo_not_found_handling(self, cli_with_mocked_console, mock_prompt, workflow_method, expected_message):
+        """Test that workflows handle 'todo not found' scenarios consistently."""
+        from uuid import uuid4
+
+        from src.domain.exceptions import TodoNotFoundError
+        from tests.interface.cli.conftest import assert_console_message_contains, setup_mock_prompt_sequence
+
+        todo_id = uuid4()
+        inputs = [str(todo_id)]
+        if workflow_method == "delete_todo":
+            inputs.append("y")  # Add confirmation for delete
+
+        setup_mock_prompt_sequence(mock_prompt, inputs)
+
+        # Mock different scenarios based on workflow
+        if workflow_method in ["update_todo", "delete_todo"]:
+            # These check repository first
+            cli_with_mocked_console.service.repository.find_by_id.return_value = None
+        else:
+            # complete_todo calls service directly, so mock service to raise exception
+            cli_with_mocked_console.service.complete_todo.side_effect = TodoNotFoundError("Todo not found")
+
+        # Execute workflow
+        method = getattr(cli_with_mocked_console, workflow_method)
+        result = method()
+
+        assert result is True
+        assert assert_console_message_contains(cli_with_mocked_console.console, expected_message)
 
 
 class TestDeleteTodoWorkflow:

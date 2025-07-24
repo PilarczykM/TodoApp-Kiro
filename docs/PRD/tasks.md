@@ -169,10 +169,10 @@
     - [x] Test completion workflow and status display (commit: "Add complete todo CLI tests")
     - _Requirements: 4.1, 4.2, 4.3, 4.5_
 
-  - [ ] 7.7 Implement delete todo CLI workflow
-    - [ ] Write failing tests for delete todo user interaction with confirmation (commit: "Add failing tests for delete todo CLI")
-    - [ ] Implement delete todo CLI method with confirmation prompts (commit: "Implement delete todo CLI workflow")
-    - [ ] Test deletion workflow and confirmation handling (commit: "Add delete todo CLI confirmation tests")
+  - [x] 7.7 Implement delete todo CLI workflow
+    - [x] Write failing tests for delete todo user interaction with confirmation (commit: "Add failing tests for delete todo CLI")
+    - [x] Implement delete todo CLI method with confirmation prompts (commit: "Implement delete todo CLI workflow")
+    - [x] Test deletion workflow and confirmation handling (commit: "Add delete todo CLI confirmation tests")
     - _Requirements: 5.1, 5.2, 5.3, 5.5_
   - **⚠️ WAIT FOR CONFIRMATION BEFORE PROCEEDING TO TASK 8**
 

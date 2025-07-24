@@ -5,6 +5,7 @@ This module contains tests for console formatting, color helpers,
 and display utilities used in the CLI interface.
 """
 
+import pytest
 from rich.table import Table
 
 from src.interface.cli.console_helpers import ConsoleColors, format_status, format_todo_table
@@ -37,29 +38,20 @@ class TestConsoleColors:
 class TestFormatStatus:
     """Test suite for status formatting function."""
 
-    def test_should_format_pending_status_with_color(self):
-        """Test that pending status is formatted with appropriate color."""
-        # Act
-        result = format_status(False)
+    @pytest.mark.parametrize(
+        "completed,expected_text,expected_color",
+        [
+            (False, "PENDING", ConsoleColors.PENDING),
+            (True, "COMPLETED", ConsoleColors.COMPLETED),
+        ],
+    )
+    def test_should_format_status_with_appropriate_color(self, completed, expected_text, expected_color):
+        """Test that status is formatted with appropriate color and text."""
+        result = format_status(completed)
 
-        # Assert
-        assert "PENDING" in result
-        assert ConsoleColors.PENDING in result or "[" in result
-
-    def test_should_format_completed_status_with_color(self):
-        """Test that completed status is formatted with appropriate color."""
-        # Act
-        result = format_status(True)
-
-        # Assert
-        assert "COMPLETED" in result
-        assert ConsoleColors.COMPLETED in result or "[" in result
-
-    def test_should_return_string_for_both_statuses(self):
-        """Test that format_status always returns a string."""
-        # Act & Assert
-        assert isinstance(format_status(True), str)
-        assert isinstance(format_status(False), str)
+        assert expected_text in result
+        assert expected_color in result or "[" in result
+        assert isinstance(result, str)
 
 
 class TestFormatTodoTable:
