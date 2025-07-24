@@ -71,6 +71,7 @@ src/
 - **Type Safety**: Strict MyPy configuration (tests excluded by design)
 - **Code Style**: Ruff with 120 character line length
 - **Testing**: Comprehensive unit/integration tests with pytest markers
+- **Test Organization**: Move all possible mocks and fixtures into conftest.py files
 - **Error Handling**: Custom domain exceptions with Pydantic validation
 
 ## CLI Interface (In Development)
