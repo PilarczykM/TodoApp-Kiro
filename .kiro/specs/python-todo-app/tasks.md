@@ -116,15 +116,15 @@
     - _Requirements: 5.1, 5.3, 5.4, 5.5_
   - **⚠️ WAIT FOR CONFIRMATION BEFORE PROCEEDING TO TASK 6**
 
-- [ ] 6. Create configuration management system
+- [x] 6. Create configuration management system
   - **Branch**: `feat/configuration-management`
-  - [ ] 6.1 Implement Settings class with JSON config loading
+  - [x] 6.1 Implement Settings class with JSON config loading
     - [ ] Write failing tests for Settings class and config file loading (commit: "Add failing tests for Settings class")
     - [ ] Implement Settings class with Pydantic validation and file loading (commit: "Implement Settings class with JSON config loading")
     - [ ] Test default values and configuration validation (commit: "Add Settings validation tests")
     - _Requirements: 6.1, 6.2, 8.2_
 
-  - [ ] 6.2 Create repository factory with strategy pattern
+  - [x] 6.2 Create repository factory with strategy pattern
     - [ ] Write failing tests for repository factory and storage type switching (commit: "Add failing tests for repository factory")
     - [ ] Implement factory function to create repositories based on configuration (commit: "Implement repository factory with strategy pattern")
     - [ ] Test repository instantiation and configuration-driven selection (commit: "Add repository factory selection tests")
