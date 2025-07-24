@@ -30,6 +30,14 @@ class TodoCLI:
         """
         self.service = service
         self.console = Console()
+        self._menu_options = {
+            "1": ("Add Todo", self.add_todo),
+            "2": ("List Todos", self.list_todos),
+            "3": ("Update Todo", self.update_todo),
+            "4": ("Complete Todo", self.complete_todo),
+            "5": ("Delete Todo", self.delete_todo),
+            "6": ("Exit", self._exit_application),
+        }
 
     def run(self) -> None:
         """
@@ -43,21 +51,8 @@ class TodoCLI:
                 self.show_main_menu()
                 choice = self._get_menu_choice()
 
-                if choice == "1":
-                    self.add_todo()
-                elif choice == "2":
-                    self.list_todos()
-                elif choice == "3":
-                    self.update_todo()
-                elif choice == "4":
-                    self.complete_todo()
-                elif choice == "5":
-                    self.delete_todo()
-                elif choice == "6":
-                    self._show_goodbye_message()
+                if not self._handle_menu_choice(choice):
                     break
-                else:
-                    self._show_invalid_choice_message()
 
         except KeyboardInterrupt:
             self._show_goodbye_message()
@@ -73,39 +68,48 @@ class TodoCLI:
         self.console.print(welcome_panel)
 
         # Display menu options
-        menu_text = """
+        menu_options = []
+        for option_key, (description, _) in self._menu_options.items():
+            menu_options.append(f"[cyan]{option_key}.[/cyan] {description}")
+
+        menu_text = f"""
 [bold]Choose an option:[/bold]
 
-[cyan]1.[/cyan] Add Todo
-[cyan]2.[/cyan] List Todos
-[cyan]3.[/cyan] Update Todo
-[cyan]4.[/cyan] Complete Todo
-[cyan]5.[/cyan] Delete Todo
-[cyan]6.[/cyan] Exit
+{chr(10).join(menu_options)}
         """
 
         menu_panel = Panel(menu_text.strip(), title="Menu", border_style="cyan")
         self.console.print(menu_panel)
 
-    def add_todo(self) -> None:
+    def add_todo(self) -> bool:
         """Handle add todo workflow - placeholder for now."""
         self.console.print(f"[{ConsoleColors.INFO}]Add Todo functionality coming soon![/{ConsoleColors.INFO}]")
+        return True
 
-    def list_todos(self) -> None:
+    def list_todos(self) -> bool:
         """Handle list todos workflow - placeholder for now."""
         self.console.print(f"[{ConsoleColors.INFO}]List Todos functionality coming soon![/{ConsoleColors.INFO}]")
+        return True
 
-    def update_todo(self) -> None:
+    def update_todo(self) -> bool:
         """Handle update todo workflow - placeholder for now."""
         self.console.print(f"[{ConsoleColors.INFO}]Update Todo functionality coming soon![/{ConsoleColors.INFO}]")
+        return True
 
-    def complete_todo(self) -> None:
+    def complete_todo(self) -> bool:
         """Handle complete todo workflow - placeholder for now."""
         self.console.print(f"[{ConsoleColors.INFO}]Complete Todo functionality coming soon![/{ConsoleColors.INFO}]")
+        return True
 
-    def delete_todo(self) -> None:
+    def delete_todo(self) -> bool:
         """Handle delete todo workflow - placeholder for now."""
         self.console.print(f"[{ConsoleColors.INFO}]Delete Todo functionality coming soon![/{ConsoleColors.INFO}]")
+        return True
+
+    def _exit_application(self) -> bool:
+        """Handle application exit."""
+        self._show_goodbye_message()
+        return False
 
     def _get_menu_choice(self) -> str:
         """
@@ -114,7 +118,25 @@ class TodoCLI:
         Returns:
             User's choice as string
         """
-        return Prompt.ask("\n[bold]Enter your choice[/bold]", choices=["1", "2", "3", "4", "5", "6"], default="6")
+        valid_choices = list(self._menu_options.keys())
+        return Prompt.ask("\n[bold]Enter your choice[/bold]", choices=valid_choices, default="6")
+
+    def _handle_menu_choice(self, choice: str) -> bool:
+        """
+        Handle user's menu choice using command dispatch pattern.
+
+        Args:
+            choice: User's menu choice as string
+
+        Returns:
+            True to continue the main loop, False to exit
+        """
+        if choice in self._menu_options:
+            _, handler = self._menu_options[choice]
+            return handler()
+        else:
+            self._show_invalid_choice_message()
+            return True
 
     def _show_invalid_choice_message(self) -> None:
         """Display invalid choice error message."""
