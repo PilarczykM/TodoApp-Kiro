@@ -229,9 +229,38 @@ class TodoCLI:
             return True
 
     def complete_todo(self) -> bool:
-        """Handle complete todo workflow - placeholder for now."""
-        self.console.print(f"[{ConsoleColors.INFO}]Complete Todo functionality coming soon![/{ConsoleColors.INFO}]")
-        return True
+        """
+        Handle complete todo workflow with ID prompting and confirmation.
+
+        Prompts user for todo ID, marks the todo as completed through the
+        service layer, and displays success/error messages appropriately.
+
+        Returns:
+            True to continue the main menu loop
+        """
+        self.console.print()
+        self.console.print(Panel("[bold cyan]Complete Todo[/bold cyan]", border_style="cyan"))
+
+        try:
+            # Get todo ID from user
+            todo_id = self._prompt_for_complete_todo_id()
+            if todo_id is None:
+                return True
+
+            # Complete todo through service
+            completed_todo = self.service.complete_todo(todo_id)
+
+            # Display success message
+            self._display_todo_completed_success(completed_todo)
+            return True
+
+        except TodoDomainError as e:
+            self._display_domain_error(e)
+            return True
+
+        except Exception as e:
+            self._display_unexpected_error(e)
+            return True
 
     def delete_todo(self) -> bool:
         """Handle delete todo workflow - placeholder for now."""
@@ -480,3 +509,43 @@ class TodoCLI:
 
         self.console.print(success_message)
         self.console.print(Panel(details.strip(), title="Updated Details", border_style="green"))
+
+    def _prompt_for_complete_todo_id(self) -> "UUID | None":
+        """
+        Prompt user for todo ID to complete and parse to UUID.
+
+        Returns:
+            UUID if valid, None if invalid format
+        """
+        id_input = Prompt.ask("\n[bold]Enter the ID of the todo to complete[/bold]", default="")
+
+        if not id_input.strip():
+            self.console.print(f"[{ConsoleColors.ERROR}]Todo ID is required.[/{ConsoleColors.ERROR}]")
+            return None
+
+        try:
+            return UUID(id_input.strip())
+        except ValueError:
+            self.console.print(
+                f"[{ConsoleColors.ERROR}]Invalid ID format. Please enter a valid UUID.[/{ConsoleColors.ERROR}]"
+            )
+            return None
+
+    def _display_todo_completed_success(self, todo: "TodoItem") -> None:
+        """Display success message with completed todo details."""
+        success_message = (
+            f"[{ConsoleColors.SUCCESS}]✅ Todo '{todo.title}' marked as complete![/{ConsoleColors.SUCCESS}]"
+        )
+
+        details = f"""
+[bold]Completed Todo:[/bold]
+
+[bold]Title:[/bold] {todo.title}
+[bold]ID:[/bold] {str(todo.id)[:8]}...
+[bold]Description:[/bold] {todo.description or "No description"}
+[bold]Due Date:[/bold] {todo.due_date.strftime("%Y-%m-%d") if todo.due_date else "No due date"}
+[bold]Status:[/bold] ✅ Completed
+        """
+
+        self.console.print(success_message)
+        self.console.print(Panel(details.strip(), title="Completion Confirmed", border_style="green"))

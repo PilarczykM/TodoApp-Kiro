@@ -157,16 +157,16 @@
     - [x] Test empty list handling and color-coded status display (commit: "Add list todos display tests")
     - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5_
 
-  - [ ] 7.5 Implement update todo CLI workflow
-    - [ ] Write failing tests for update todo user interaction (commit: "Add failing tests for update todo CLI")
-    - [ ] Implement update todo CLI method with current value display and editing (commit: "Implement update todo CLI workflow")
-    - [ ] Test ID validation and field update workflows (commit: "Add update todo CLI validation tests")
+  - [x] 7.5 Implement update todo CLI workflow
+    - [x] Write failing tests for update todo user interaction (commit: "Add failing tests for update todo CLI")
+    - [x] Implement update todo CLI method with current value display and editing (commit: "Implement update todo CLI workflow")
+    - [x] Test ID validation and field update workflows (commit: "Add update todo CLI validation tests")
     - _Requirements: 3.1, 3.2, 3.3, 3.5_
 
-  - [ ] 7.6 Implement complete todo CLI workflow
-    - [ ] Write failing tests for complete todo user interaction (commit: "Add failing tests for complete todo CLI")
-    - [ ] Implement complete todo CLI method with ID prompting and confirmation (commit: "Implement complete todo CLI workflow")
-    - [ ] Test completion workflow and status display (commit: "Add complete todo CLI tests")
+  - [x] 7.6 Implement complete todo CLI workflow
+    - [x] Write failing tests for complete todo user interaction (commit: "Add failing tests for complete todo CLI")
+    - [x] Implement complete todo CLI method with ID prompting and confirmation (commit: "Implement complete todo CLI workflow")
+    - [x] Test completion workflow and status display (commit: "Add complete todo CLI tests")
     - _Requirements: 4.1, 4.2, 4.3, 4.5_
 
   - [ ] 7.7 Implement delete todo CLI workflow

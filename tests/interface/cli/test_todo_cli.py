@@ -102,7 +102,7 @@ class TestTodoCLIMenuSystem:
 class TestTodoCLIWorkflowMethods:
     """Test suite for todo workflow methods."""
 
-    @pytest.mark.parametrize("method_name", ["complete_todo", "delete_todo"])
+    @pytest.mark.parametrize("method_name", ["delete_todo"])
     def test_workflow_methods_return_true(self, cli_with_mocked_console, method_name):
         """Test that workflow methods return True to continue loop."""
         method = getattr(cli_with_mocked_console, method_name)
@@ -844,3 +844,162 @@ class TestUpdateTodoWorkflow:
         print_calls = cli_with_mocked_console.console.print.call_args_list
         error_call_found = any("error" in str(call).lower() for call in print_calls)
         assert error_call_found
+
+
+class TestCompleteTodoWorkflow:
+    """Test suite for complete todo CLI workflow."""
+
+    def test_should_prompt_for_todo_id(self, cli_with_mocked_console, mock_prompt):
+        """Test that complete_todo prompts for todo ID."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_prompt.return_value = str(todo_id)
+
+        # Mock existing todo
+        mock_todo = TodoItem(id=todo_id, title="Test Todo", completed=False)
+        cli_with_mocked_console.service.complete_todo.return_value = mock_todo
+
+        result = cli_with_mocked_console.complete_todo()
+
+        assert result is True
+        mock_prompt.assert_called_once_with("\n[bold]Enter the ID of the todo to complete[/bold]", default="")
+        cli_with_mocked_console.service.complete_todo.assert_called_once_with(todo_id)
+
+    def test_should_mark_todo_as_completed_successfully(self, cli_with_mocked_console, mock_prompt):
+        """Test that valid todo ID marks todo as completed."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_prompt.return_value = str(todo_id)
+
+        # Mock completed todo
+        completed_todo = TodoItem(id=todo_id, title="Test Todo", completed=True)
+        cli_with_mocked_console.service.complete_todo.return_value = completed_todo
+
+        result = cli_with_mocked_console.complete_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.complete_todo.assert_called_once_with(todo_id)
+        # Should display success message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        success_found = any("marked as complete" in str(call).lower() for call in print_calls)
+        assert success_found
+
+    def test_should_handle_invalid_uuid_format(self, cli_with_mocked_console, mock_prompt):
+        """Test that invalid UUID format is handled gracefully."""
+        mock_prompt.return_value = "invalid-uuid-format"
+
+        result = cli_with_mocked_console.complete_todo()
+
+        assert result is True
+        # Should not call service
+        cli_with_mocked_console.service.complete_todo.assert_not_called()
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_found = any("invalid id" in str(call).lower() for call in print_calls)
+        assert error_found
+
+    def test_should_handle_todo_not_found_error(self, cli_with_mocked_console, mock_prompt):
+        """Test that TodoNotFoundError is handled gracefully."""
+        from uuid import uuid4
+
+        from src.domain.exceptions import TodoNotFoundError
+
+        todo_id = uuid4()
+        mock_prompt.return_value = str(todo_id)
+
+        cli_with_mocked_console.service.complete_todo.side_effect = TodoNotFoundError("Todo not found")
+
+        result = cli_with_mocked_console.complete_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.complete_todo.assert_called_once_with(todo_id)
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_found = any("not found" in str(call).lower() for call in print_calls)
+        assert error_found
+
+    def test_should_handle_service_domain_error(self, cli_with_mocked_console, mock_prompt):
+        """Test that TodoDomainError is handled gracefully."""
+        from uuid import uuid4
+
+        from src.domain.exceptions import TodoDomainError
+
+        todo_id = uuid4()
+        mock_prompt.return_value = str(todo_id)
+
+        cli_with_mocked_console.service.complete_todo.side_effect = TodoDomainError("Database error")
+
+        result = cli_with_mocked_console.complete_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.complete_todo.assert_called_once_with(todo_id)
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_found
+
+    def test_should_handle_unexpected_exceptions(self, cli_with_mocked_console, mock_prompt):
+        """Test that unexpected exceptions are handled gracefully."""
+        from uuid import uuid4
+
+        todo_id = uuid4()
+        mock_prompt.return_value = str(todo_id)
+
+        cli_with_mocked_console.service.complete_todo.side_effect = Exception("Unexpected error")
+
+        result = cli_with_mocked_console.complete_todo()
+
+        assert result is True
+        cli_with_mocked_console.service.complete_todo.assert_called_once_with(todo_id)
+        # Should display error message
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        error_found = any("error" in str(call).lower() for call in print_calls)
+        assert error_found
+
+    def test_should_display_success_message_with_todo_title(self, cli_with_mocked_console, mock_prompt):
+        """Test that success message includes todo title."""
+        from uuid import uuid4
+
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        todo_title = "Important Task"
+        mock_prompt.return_value = str(todo_id)
+
+        completed_todo = TodoItem(id=todo_id, title=todo_title, completed=True)
+        cli_with_mocked_console.service.complete_todo.return_value = completed_todo
+
+        result = cli_with_mocked_console.complete_todo()
+
+        assert result is True
+        # Should display success message with title
+        print_calls = cli_with_mocked_console.console.print.call_args_list
+        title_found = any(todo_title in str(call) for call in print_calls)
+        assert title_found
+
+    def test_should_return_true_to_continue_menu_loop(self, cli_with_mocked_console, mock_prompt):
+        """Test that complete_todo always returns True to continue menu loop."""
+        from uuid import uuid4
+
+        from src.domain.exceptions import TodoNotFoundError
+        from src.domain.models import TodoItem
+
+        todo_id = uuid4()
+        mock_prompt.return_value = str(todo_id)
+
+        # Test successful case
+        completed_todo = TodoItem(id=todo_id, title="Test", completed=True)
+        cli_with_mocked_console.service.complete_todo.return_value = completed_todo
+        result = cli_with_mocked_console.complete_todo()
+        assert result is True
+
+        # Test error case
+        cli_with_mocked_console.service.complete_todo.side_effect = TodoNotFoundError("Not found")
+        result = cli_with_mocked_console.complete_todo()
+        assert result is True
