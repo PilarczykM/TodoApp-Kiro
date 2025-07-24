@@ -48,3 +48,25 @@ class TestTodoService:
         # Assert
         assert service1.repository is mock_json_repo
         assert service2.repository is mock_xml_repo
+
+    def test_should_store_repository_reference_for_use_cases(self):
+        """Test that TodoService stores repository reference for use case methods."""
+        # Arrange
+        mock_repo = Mock(spec=TodoRepository)
+
+        # Act
+        service = TodoService(mock_repo)
+
+        # Assert
+        assert hasattr(service, "repository")
+        assert service.repository is mock_repo
+
+    def test_should_be_ready_for_use_case_orchestration(self):
+        """Test that TodoService is properly initialized for orchestrating use cases."""
+        # Arrange & Act
+        service = TodoService(self.mock_repo)
+
+        # Assert
+        assert service is not None
+        assert service.repository is not None
+        assert isinstance(service.repository, Mock)  # Mock implements TodoRepository spec
