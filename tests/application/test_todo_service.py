@@ -11,7 +11,7 @@ from uuid import UUID
 import pytest
 
 from src.application.services.todo_service import TodoService
-from src.domain.exceptions import TodoDomainError, ValidationError
+from src.domain.exceptions import TodoDomainError, TodoNotFoundError, ValidationError
 from src.domain.models import TodoItem
 from src.infrastructure.persistence.repository import TodoRepository
 
@@ -307,3 +307,381 @@ class TestListTodosUseCase:
         assert result == expected_order
         for i, todo in enumerate(result):
             assert todo.title == expected_order[i].title
+
+
+class TestUpdateTodoUseCase:
+    """Test suite for update todo use case."""
+
+    def setup_method(self):
+        """Set up test dependencies for each test method."""
+        self.mock_repo = Mock(spec=TodoRepository)
+        self.service = TodoService(self.mock_repo)
+
+    def test_should_update_todo_with_valid_id_and_data(self):
+        """Test updating a todo with valid ID and data."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Old title", description="Old description")
+        existing_todo.id = todo_id
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act
+        result = self.service.update_todo(todo_id, title="New title", description="New description")
+
+        # Assert
+        assert result is not None
+        assert result.title == "New title"
+        assert result.description == "New description"
+        assert result.id == todo_id
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_called_once_with(result)
+
+    def test_should_update_todo_with_partial_data(self):
+        """Test updating a todo with only some fields."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Old title", description="Old description")
+        existing_todo.id = todo_id
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act
+        result = self.service.update_todo(todo_id, title="New title")
+
+        # Assert
+        assert result.title == "New title"
+        assert result.description == "Old description"  # Should remain unchanged
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_called_once_with(result)
+
+    def test_should_update_todo_due_date(self):
+        """Test updating a todo's due date."""
+        # Arrange
+        from datetime import datetime, timedelta
+
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Task", description="Description")
+        existing_todo.id = todo_id
+        new_due_date = datetime.now() + timedelta(days=7)
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act
+        result = self.service.update_todo(todo_id, due_date=new_due_date)
+
+        # Assert
+        assert result.due_date == new_due_date
+        assert result.title == "Task"  # Should remain unchanged
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_called_once_with(result)
+
+    def test_should_raise_not_found_error_for_invalid_id(self):
+        """Test that invalid todo ID raises TodoNotFoundError."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        self.mock_repo.find_by_id.return_value = None
+
+        # Act & Assert
+        with pytest.raises(TodoNotFoundError, match="Todo with ID .* not found"):
+            self.service.update_todo(todo_id, title="New title")
+
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_not_called()
+
+    def test_should_raise_validation_error_for_empty_title(self):
+        """Test that empty title raises validation error."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Old title", description="Description")
+        existing_todo.id = todo_id
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act & Assert
+        with pytest.raises(ValidationError, match="Title cannot be empty"):
+            self.service.update_todo(todo_id, title="")
+
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_not_called()
+
+    def test_should_raise_validation_error_for_past_due_date(self):
+        """Test that past due date raises validation error."""
+        # Arrange
+        from datetime import datetime, timedelta
+
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Task", description="Description")
+        existing_todo.id = todo_id
+        past_due_date = datetime.now() - timedelta(days=1)
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act & Assert
+        with pytest.raises(ValidationError, match="Due date cannot be in the past"):
+            self.service.update_todo(todo_id, due_date=past_due_date)
+
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_not_called()
+
+    def test_should_handle_repository_update_errors(self):
+        """Test handling of repository update errors."""
+        # Arrange
+        from src.domain.exceptions import TodoDomainError
+
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Old title", description="Description")
+        existing_todo.id = todo_id
+        self.mock_repo.find_by_id.return_value = existing_todo
+        self.mock_repo.update.side_effect = TodoDomainError("Update failed")
+
+        # Act & Assert
+        with pytest.raises(TodoDomainError, match="Update failed"):
+            self.service.update_todo(todo_id, title="New title")
+
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_called_once()
+
+    def test_should_update_timestamps_on_update(self):
+        """Test that updated_at timestamp is updated."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Old title", description="Description")
+        existing_todo.id = todo_id
+        original_updated_at = existing_todo.updated_at
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act
+        result = self.service.update_todo(todo_id, title="New title")
+
+        # Assert
+        assert result.updated_at > original_updated_at
+        self.mock_repo.update.assert_called_once_with(result)
+
+
+class TestCompleteTodoUseCase:
+    """Test suite for complete todo use case."""
+
+    def setup_method(self):
+        """Set up test dependencies for each test method."""
+        self.mock_repo = Mock(spec=TodoRepository)
+        self.service = TodoService(self.mock_repo)
+
+    def test_should_complete_todo_with_valid_id(self):
+        """Test completing a todo with valid ID."""
+        # Arrange
+        from datetime import datetime
+
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Task", description="Description")
+        existing_todo.id = todo_id
+        existing_todo.completed = False
+        self.mock_repo.find_by_id.return_value = existing_todo
+        before_completion = datetime.now()
+
+        # Act
+        result = self.service.complete_todo(todo_id)
+
+        # Assert
+        after_completion = datetime.now()
+        assert result is not None
+        assert result.completed is True
+        assert before_completion <= result.updated_at <= after_completion
+        assert result.id == todo_id
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_called_once_with(result)
+
+    def test_should_preserve_other_todo_properties_when_completing(self):
+        """Test that completing a todo preserves other properties."""
+        # Arrange
+        from datetime import datetime, timedelta
+
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        due_date = datetime.now() + timedelta(days=1)
+        existing_todo = TodoItem(title="Important task", description="Task description", due_date=due_date)
+        existing_todo.id = todo_id
+        existing_todo.completed = False
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act
+        result = self.service.complete_todo(todo_id)
+
+        # Assert
+        assert result.title == "Important task"
+        assert result.description == "Task description"
+        assert result.due_date == due_date
+        assert result.completed is True
+        assert result.id == todo_id
+        self.mock_repo.update.assert_called_once_with(result)
+
+    def test_should_raise_not_found_error_for_invalid_id(self):
+        """Test that invalid todo ID raises TodoNotFoundError."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        self.mock_repo.find_by_id.return_value = None
+
+        # Act & Assert
+        with pytest.raises(TodoNotFoundError, match="Todo with ID .* not found"):
+            self.service.complete_todo(todo_id)
+
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_not_called()
+
+    def test_should_raise_validation_error_for_already_completed_todo(self):
+        """Test that completing an already completed todo raises validation error."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Task", description="Description")
+        existing_todo.id = todo_id
+        existing_todo.completed = True  # Already completed
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act & Assert
+        with pytest.raises(ValidationError, match="Todo is already completed"):
+            self.service.complete_todo(todo_id)
+
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_not_called()
+
+    def test_should_handle_repository_update_errors(self):
+        """Test handling of repository update errors during completion."""
+        # Arrange
+        from src.domain.exceptions import TodoDomainError
+
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Task", description="Description")
+        existing_todo.id = todo_id
+        existing_todo.completed = False
+        self.mock_repo.find_by_id.return_value = existing_todo
+        self.mock_repo.update.side_effect = TodoDomainError("Update failed")
+
+        # Act & Assert
+        with pytest.raises(TodoDomainError, match="Update failed"):
+            self.service.complete_todo(todo_id)
+
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.update.assert_called_once()
+
+    def test_should_set_completion_timestamp(self):
+        """Test that completion updates the updated_at timestamp."""
+        # Arrange
+        from datetime import datetime
+
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Task", description="Description")
+        existing_todo.id = todo_id
+        existing_todo.completed = False
+        self.mock_repo.find_by_id.return_value = existing_todo
+        original_updated_at = existing_todo.updated_at
+        before_completion = datetime.now()
+
+        # Act
+        result = self.service.complete_todo(todo_id)
+
+        # Assert
+        after_completion = datetime.now()
+        assert result.updated_at > original_updated_at
+        assert before_completion <= result.updated_at <= after_completion
+        self.mock_repo.update.assert_called_once_with(result)
+
+
+class TestDeleteTodoUseCase:
+    """Test suite for delete todo use case."""
+
+    def setup_method(self):
+        """Set up test dependencies for each test method."""
+        self.mock_repo = Mock(spec=TodoRepository)
+        self.service = TodoService(self.mock_repo)
+
+    def test_should_delete_todo_with_valid_id(self):
+        """Test deleting a todo with valid ID."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Task to delete", description="Description")
+        existing_todo.id = todo_id
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act
+        result = self.service.delete_todo(todo_id)
+
+        # Assert
+        assert result is None  # Delete should not return anything
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.delete.assert_called_once_with(todo_id)
+
+    def test_should_raise_not_found_error_for_invalid_id(self):
+        """Test that invalid todo ID raises TodoNotFoundError."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        self.mock_repo.find_by_id.return_value = None
+
+        # Act & Assert
+        with pytest.raises(TodoNotFoundError, match="Todo with ID .* not found"):
+            self.service.delete_todo(todo_id)
+
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.delete.assert_not_called()
+
+    def test_should_handle_repository_delete_errors(self):
+        """Test handling of repository delete errors."""
+        # Arrange
+        from src.domain.exceptions import TodoDomainError
+
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Task", description="Description")
+        existing_todo.id = todo_id
+        self.mock_repo.find_by_id.return_value = existing_todo
+        self.mock_repo.delete.side_effect = TodoDomainError("Delete failed")
+
+        # Act & Assert
+        with pytest.raises(TodoDomainError, match="Delete failed"):
+            self.service.delete_todo(todo_id)
+
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.delete.assert_called_once_with(todo_id)
+
+    def test_should_verify_todo_exists_before_deletion(self):
+        """Test that delete verifies todo exists before attempting deletion."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Task", description="Description")
+        existing_todo.id = todo_id
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act
+        self.service.delete_todo(todo_id)
+
+        # Assert
+        # Should call find_by_id first to verify existence
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        # Then call delete
+        self.mock_repo.delete.assert_called_once_with(todo_id)
+
+    def test_should_delete_completed_todos(self):
+        """Test that completed todos can be deleted."""
+        # Arrange
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        existing_todo = TodoItem(title="Completed task", description="Description")
+        existing_todo.id = todo_id
+        existing_todo.completed = True
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act
+        self.service.delete_todo(todo_id)
+
+        # Assert
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.delete.assert_called_once_with(todo_id)
+
+    def test_should_delete_todos_with_due_dates(self):
+        """Test that todos with due dates can be deleted."""
+        # Arrange
+        from datetime import datetime, timedelta
+
+        todo_id = UUID("12345678-1234-5678-9012-123456789012")
+        due_date = datetime.now() + timedelta(days=1)
+        existing_todo = TodoItem(title="Task with due date", description="Description", due_date=due_date)
+        existing_todo.id = todo_id
+        self.mock_repo.find_by_id.return_value = existing_todo
+
+        # Act
+        self.service.delete_todo(todo_id)
+
+        # Assert
+        self.mock_repo.find_by_id.assert_called_once_with(todo_id)
+        self.mock_repo.delete.assert_called_once_with(todo_id)
