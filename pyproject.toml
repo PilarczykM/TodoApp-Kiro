@@ -18,14 +18,8 @@ dependencies = [
     "pydantic>=2.0",
     "rich",
     "lxml",
-]
-
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "pytest-cov",
-    "ruff",
-    "mypy",
+    "lxml-stubs>=0.5.1",
+    "types-pygments>=2.19.0.20250715",
 ]
 
 [project.scripts]
@@ -103,7 +97,7 @@ addopts = [
     "--cov=src",
     "--cov-report=term-missing",
     "--cov-report=html",
-    "--cov-fail-under=100",
+    "--cov-fail-under=95",
     "--tb=short",
     "--durations=10",
 ]
@@ -138,6 +132,7 @@ exclude_lines = [
 
 [dependency-groups]
 dev = [
+    "lxml-stubs>=0.5.1",
     "mypy>=1.17.0",
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",

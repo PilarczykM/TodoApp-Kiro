@@ -112,6 +112,15 @@ wheels = [
 ]
 
 [[package]]
+name = "lxml-stubs"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/99/da/1a3a3e5d159b249fc2970d73437496b908de8e4716a089c69591b4ffa6fd/lxml-stubs-0.5.1.tar.gz", hash = "sha256:e0ec2aa1ce92d91278b719091ce4515c12adc1d564359dfaf81efa7d4feab79d", size = 14778, upload-time = "2024-01-10T09:37:46.521Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1f/c9/e0f8e4e6e8a69e5959b06499582dca6349db6769cc7fdfb8a02a7c75a9ae/lxml_stubs-0.5.1-py3-none-any.whl", hash = "sha256:1f689e5dbc4b9247cb09ae820c7d34daeb1fdbd1db06123814b856dae7787272", size = 13584, upload-time = "2024-01-10T09:37:44.931Z" },
+]
+
+[[package]]
 name = "markdown-it-py"
 version = "3.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -334,20 +343,15 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "lxml" },
+    { name = "lxml-stubs" },
     { name = "pydantic" },
     { name = "rich" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "mypy" },
-    { name = "pytest" },
-    { name = "pytest-cov" },
-    { name = "ruff" },
+    { name = "types-pygments" },
 ]
 
 [package.dev-dependencies]
 dev = [
+    { name = "lxml-stubs" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -357,21 +361,40 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "lxml" },
-    { name = "mypy", marker = "extra == 'dev'" },
+    { name = "lxml-stubs", specifier = ">=0.5.1" },
     { name = "pydantic", specifier = ">=2.0" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest-cov", marker = "extra == 'dev'" },
     { name = "rich" },
-    { name = "ruff", marker = "extra == 'dev'" },
+    { name = "types-pygments", specifier = ">=2.19.0.20250715" },
 ]
-provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "lxml-stubs", specifier = ">=0.5.1" },
     { name = "mypy", specifier = ">=1.17.0" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-cov", specifier = ">=6.2.1" },
     { name = "ruff", specifier = ">=0.12.4" },
+]
+
+[[package]]
+name = "types-docutils"
+version = "0.21.0.20250722"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9d/be/77ad89d7e45eb9fb2be7279ccb9bdbe6a9b406fb50e2fb19e83e26ef6880/types_docutils-0.21.0.20250722.tar.gz", hash = "sha256:0dcb4d8110a145ba5f9c77be47cfc03b55387f7bd53ba2964eb0a830ecb1b4a9", size = 54539, upload-time = "2025-07-22T03:22:28.291Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/05/fb/388549a782216409bbc80b9e2fcf9d112c1ef5fbead7b3d1b831b2d0ac0f/types_docutils-0.21.0.20250722-py3-none-any.whl", hash = "sha256:503099715fcb3530ba09a27b953d86e639211c6cd0498a153300b2655c3b616c", size = 88991, upload-time = "2025-07-22T03:22:27.265Z" },
+]
+
+[[package]]
+name = "types-pygments"
+version = "2.19.0.20250715"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "types-docutils" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cb/e6/5ee8339d4122dccb08cf6b2d766221784960325767cf32a4b9e0aca08cd8/types_pygments-2.19.0.20250715.tar.gz", hash = "sha256:896e45cb5331492be0937b0e9cef976547dee5c507d546a1351289f3cea6eaac", size = 18491, upload-time = "2025-07-15T03:23:28.244Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ed/48/1b924b3cfbde33b296197615fa5aea5612b59369e5127e8302daec1ea165/types_pygments-2.19.0.20250715-py3-none-any.whl", hash = "sha256:90b45a484123727e125ffddf0379c627d88401dce768a2555038cb5be98b3f2c", size = 25451, upload-time = "2025-07-15T03:23:26.951Z" },
 ]
 
 [[package]]
