@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from src.application.services.todo_factory import TodoItemFactory, _convert_pydantic_error
+from src.application.factories.todo_factory import TodoItemFactory, _convert_pydantic_error
 from src.domain.exceptions import ValidationError
 from src.domain.models import TodoItem
 

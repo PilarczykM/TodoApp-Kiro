@@ -8,7 +8,7 @@ to fulfill business use cases following Domain-Driven Design principles.
 from datetime import datetime
 from uuid import UUID
 
-from src.application.services.todo_factory import TodoItemFactory
+from src.application.factories.todo_factory import TodoItemFactory
 from src.domain.exceptions import TodoNotFoundError, ValidationError
 from src.domain.models import TodoItem
 from src.infrastructure.persistence.repository import TodoRepository
