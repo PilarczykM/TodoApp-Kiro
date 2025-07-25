@@ -55,7 +55,7 @@ def format_todo_table(todos: list[TodoItem]) -> Table:
     table = Table(title="Todo Items")
 
     # Add columns
-    table.add_column("ID", style="dim", width=8)
+    table.add_column("ID", style="dim")
     table.add_column("Title", style="bold")
     table.add_column("Description")
     table.add_column("Status", justify="center")
@@ -65,7 +65,7 @@ def format_todo_table(todos: list[TodoItem]) -> Table:
     # Add rows for each todo
     for todo in todos:
         # Format ID (show first 8 characters)
-        todo_id = str(todo.id)[:8]
+        todo_id = str(todo.id)
 
         # Format description (handle None)
         description = todo.description if todo.description else "-"
