@@ -87,6 +87,25 @@ class TodoService:
         """
         return self.repository.find_all()
 
+    def get_todo_by_id(self, todo_id: UUID) -> TodoItem:
+        """
+        Retrieve a specific todo item by its ID.
+
+        Args:
+            todo_id: The unique identifier of the todo item
+
+        Returns:
+            The TodoItem instance if found
+
+        Raises:
+            TodoNotFoundError: If the todo item doesn't exist
+            TodoDomainError: If the retrieval operation fails
+        """
+        todo = self.repository.find_by_id(todo_id)
+        if todo is None:
+            raise TodoNotFoundError(f"Todo with id {todo_id} not found")
+        return todo
+
     def update_todo(
         self,
         todo_id: UUID,

@@ -406,7 +406,10 @@ class TodoCLI:
             return None
 
         try:
-            # Parse date in YYYY-MM-DD format
+            # First try parsing full ISO datetime format
+            if "T" in date_input:
+                return datetime.fromisoformat(date_input.strip())
+            # Fallback to YYYY-MM-DD format
             return datetime.strptime(date_input.strip(), "%Y-%m-%d")
         except ValueError:
             self.console.print(
