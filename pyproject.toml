@@ -106,6 +106,7 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
+    "property_based: marks tests as property-based tests",
 ]
 filterwarnings = [
     "error",
@@ -133,6 +134,7 @@ exclude_lines = [
 
 [dependency-groups]
 dev = [
+    "hypothesis>=6.136.4",
     "lxml-stubs>=0.5.1",
     "mypy>=1.17.0",
     "pytest>=8.4.1",
