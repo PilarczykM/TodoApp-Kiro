@@ -168,9 +168,9 @@ The project maintains **95%+ test coverage** with comprehensive test suites:
 make test
 
 # Run specific test categories
-uv run pytest -m unit          # Unit tests only
-uv run pytest -m integration   # Integration tests only
-uv run pytest -m property_based # Property-based tests
+uv run pytest -m unit --no-cov           # Unit tests only
+uv run pytest -m integration --no-cov    # Integration tests only
+uv run pytest -m property_based --no-cov # Property-based tests
 
 # Run single test
 uv run pytest tests/domain/test_models.py::TestTodoItem::test_create_valid_todo
